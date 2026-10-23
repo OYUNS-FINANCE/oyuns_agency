@@ -35,14 +35,23 @@ describe("compareVersions", () => {
     const changes = compareVersions(version(1), edited);
     expect(changes.map((c) => c.label)).toEqual([
       "Idea › one liner",
-      "Market › segments › #2 › name",
-      "Market › segments › #2 › description",
+      "Market › segments › Chains › name",
+      "Market › segments › Chains › description",
     ]);
     expect(changes[0]).toMatchObject({
       before: base.opportunity.one_liner,
       after: "Ledgers for café chains.",
     });
     expect(changes[1]).toMatchObject({ before: null, after: "Chains" });
+  });
+
+  it("labels rubric rows by dimension", () => {
+    const base = idea();
+    const scores = base.critique.scores.map((s, i) => (i === 0 ? { ...s, score: 9 } : s));
+    const rescored = version(2, { critique: { ...base.critique, scores } });
+    expect(compareVersions(version(1), rescored).map((c) => c.label)).toEqual([
+      "Scorecard › scores › cac risk › score",
+    ]);
   });
 
   it("finds no changes between identical versions", () => {

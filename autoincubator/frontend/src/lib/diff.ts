@@ -64,25 +64,46 @@ function humanize(token: string): string {
   return token.replaceAll("_", " ");
 }
 
-/** Leaf values by JSON-pointer-like path, rendered as display strings. */
-function flatten(value: Json, path: string, out: Map<string, string>): void {
+/** List items that carry their own identity are labelled by it, not by position. */
+function itemName(item: Json): string | null {
+  if (item === null || typeof item !== "object" || Array.isArray(item)) return null;
+  const name = item.dimension ?? item.name;
+  return typeof name === "string" ? name : null;
+}
+
+/** Leaf values by JSON-pointer-like path, rendered as display strings; `labels` gets the
+ *  readable label of each path segment (a rubric dimension instead of "#3"). */
+function flatten(
+  value: Json,
+  path: string,
+  labels: string[],
+  out: Map<string, string>,
+  names: Map<string, string[]>,
+): void {
   if (value === null || typeof value !== "object") {
-    if (value !== null) out.set(path, String(value));
+    if (value !== null) {
+      out.set(path, String(value));
+      names.set(path, labels);
+    }
     return;
   }
   const entries = Array.isArray(value)
-    ? value.map((v, i) => [String(i), v] as const)
-    : Object.entries(value);
-  for (const [key, child] of entries) flatten(child, `${path}/${key}`, out);
+    ? value.map((v, i) => [String(i), v, itemName(v) ?? humanize(String(i))] as const)
+    : Object.entries(value).map(([k, v]) => [k, v, humanize(k)] as const);
+  for (const [key, child, label] of entries) {
+    flatten(child, `${path}/${key}`, [...labels, label], out, names);
+  }
 }
 
 /** Every leaf field that differs between two versions, in a stable reading order. */
 export function compareVersions(before: IdeaVersionView, after: IdeaVersionView): FieldChange[] {
   const left = new Map<string, string>();
   const right = new Map<string, string>();
+  const names = new Map<string, string[]>();
   for (const section of ["opportunity", "analysis", "critique"] as const) {
-    flatten(before[section] as unknown as Json, `/${section}`, left);
-    flatten(after[section] as unknown as Json, `/${section}`, right);
+    const root = [SECTION[section] ?? section];
+    flatten(before[section] as unknown as Json, `/${section}`, root, left, names);
+    flatten(after[section] as unknown as Json, `/${section}`, root, right, names);
   }
   const paths = [...new Set([...left.keys(), ...right.keys()])];
   const order = new Map([...left.keys(), ...right.keys()].map((p, i) => [p, i]));
@@ -90,15 +111,12 @@ export function compareVersions(before: IdeaVersionView, after: IdeaVersionView)
     .filter((p) => left.get(p) !== right.get(p))
     .filter((p) => !p.endsWith("/opportunity_id") && !p.endsWith("/iteration"))
     .sort((x, y) => (order.get(x) ?? 0) - (order.get(y) ?? 0))
-    .map((path) => {
-      const [section = "", ...rest] = path.slice(1).split("/");
-      return {
-        path,
-        label: [SECTION[section] ?? section, ...rest.map(humanize)].join(" › "),
-        before: left.get(path) ?? null,
-        after: right.get(path) ?? null,
-      };
-    });
+    .map((path) => ({
+      path,
+      label: (names.get(path) ?? [path]).map((n) => n.replaceAll("_", " ")).join(" › "),
+      before: left.get(path) ?? null,
+      after: right.get(path) ?? null,
+    }));
 }
 
 /** "/opportunity/one_liner" → "Idea › one liner", for patch previews. */

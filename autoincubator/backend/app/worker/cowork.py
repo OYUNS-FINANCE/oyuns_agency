@@ -39,8 +39,6 @@ from app.worker.runs import WorkerRuntime
 
 log = get_logger(__name__)
 
-PENDING_MERGE_KEY = "mrg-new"
-
 
 async def _paused_run(rt: WorkerRuntime, run_id: uuid.UUID) -> Run | None:
     async with rt.sessionmaker() as session:
@@ -150,6 +148,9 @@ async def merge_ideas(rt: WorkerRuntime, run_id: uuid.UUID, idea_ids: Sequence[u
             version = await ideas_repo.version(session, idea.id, idea.current_version)
             assert version is not None
             sources.append(RawOpportunity.model_validate(version.opportunity))
+        # Provisional, for the agents' events; the stored key is drawn again under the run
+        # lock, so a concurrent merge can only shift it, never collide.
+        provisional_key = await ideas_repo.next_merge_key(session, run.id)
     deps, _ = run_deps(rt.settings, rt.sessionmaker, run)
     run_context = render_run_context(RunInput.model_validate(run.input))
     started = time.monotonic()
@@ -163,7 +164,7 @@ async def merge_ideas(rt: WorkerRuntime, run_id: uuid.UUID, idea_ids: Sequence[u
         )
         hybrid = RawOpportunity(
             **candidate.model_dump(),
-            id=PENDING_MERGE_KEY,
+            id=provisional_key,
             iteration=max(o.iteration for o in sources),
         )
         analysis, _ = await analyse_opportunity(hybrid, run_context, deps)

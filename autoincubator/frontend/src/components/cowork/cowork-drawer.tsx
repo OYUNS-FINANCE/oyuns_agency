@@ -166,7 +166,7 @@ export function CoworkDrawer({
           </div>
         ) : (
           <>
-            <header className="flex flex-col gap-3 border-b px-4 pt-4 pb-3 pr-12 sm:px-5">
+            <header className="flex flex-col gap-3 border-b pt-4 pr-12 pb-3 pl-4 sm:pl-5">
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <SheetTitle>{idea.title}</SheetTitle>

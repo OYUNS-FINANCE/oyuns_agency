@@ -16,8 +16,10 @@ export type ActivityEntry =
 export interface AgentPass {
   key: string;
   agent: string;
-  /** 1-based count of how many times this agent has started in the run. */
+  /** 1-based count of how many times this agent has started a Phase-1 pass in the run. */
   pass: number;
+  /** Set for co-working work while the run is paused ("Re-score", "Merge"). */
+  task: string | null;
   iteration: number | null;
   items: number | null;
   startedAt: string;
@@ -40,18 +42,22 @@ export type TimelineItem = { kind: "pass"; pass: AgentPass } | { kind: "marker";
  * Each `agent.started` opens a new pass; thoughts, tool calls and the completion attach to the
  * open pass of the same agent. Run-level events become markers between passes.
  */
+const COWORK_TASKS: Record<string, string> = { rescore: "Re-score", merge: "Merge" };
+
 export function buildTimeline(events: readonly RunEvent[]): TimelineItem[] {
   const items: TimelineItem[] = [];
   const open = new Map<string, AgentPass>();
   const passCounts = new Map<string, number>();
 
   function openPass(agent: string, event: RunEvent, started?: EventOf<"agent.started">): AgentPass {
-    const count = (passCounts.get(agent) ?? 0) + 1;
+    const task = started ? (COWORK_TASKS[started.data.node] ?? null) : null;
+    const count = (passCounts.get(agent) ?? 0) + (task ? 0 : 1);
     passCounts.set(agent, count);
     const pass: AgentPass = {
       key: `${agent}:${event.id}`,
       agent,
       pass: count,
+      task,
       iteration: started?.data.iteration ?? null,
       items: started?.data.items ?? null,
       startedAt: event.ts,

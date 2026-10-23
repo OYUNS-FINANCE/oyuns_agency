@@ -54,8 +54,12 @@ function PassView({
             aria-hidden
           />
           <span className="font-medium">{AGENT_LABEL[pass.agent] ?? humanize(pass.agent)}</span>
-          {pass.pass > 1 && (
-            <span className="text-muted-foreground font-mono text-xs">pass {pass.pass}</span>
+          {pass.task ? (
+            <span className="bg-muted rounded px-1.5 text-xs">{pass.task}</span>
+          ) : (
+            pass.pass > 1 && (
+              <span className="text-muted-foreground font-mono text-xs">pass {pass.pass}</span>
+            )
           )}
           {pass.items != null && (
             <span className="text-muted-foreground tabular font-mono text-xs">
