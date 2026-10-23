@@ -149,6 +149,8 @@ def read_stream(
     with client.stream("GET", url, headers=headers, timeout=timeout_s) as response:
         response.raise_for_status()
         assert response.headers["content-type"].startswith("text/event-stream")
+        # Proxies (the Next dev server included) must not gzip, and so buffer, the stream.
+        assert "no-transform" in response.headers["cache-control"]
         for line in response.iter_lines():
             if time.monotonic() > deadline:
                 raise TimeoutError(f"stream timed out after {len(result.events)} events")
