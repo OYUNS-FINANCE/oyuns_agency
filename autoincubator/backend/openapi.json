@@ -1,0 +1,2650 @@
+{
+  "components": {
+    "schemas": {
+      "AgentCompleted": {
+        "properties": {
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "node": {
+            "title": "Node",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Summary",
+            "type": "object"
+          }
+        },
+        "required": [
+          "node",
+          "duration_ms"
+        ],
+        "title": "AgentCompleted",
+        "type": "object"
+      },
+      "AgentCompletedEvent": {
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Agent"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AgentCompleted"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "agent.completed",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "ts",
+          "type",
+          "data"
+        ],
+        "title": "AgentCompletedEvent",
+        "type": "object"
+      },
+      "AgentStarted": {
+        "properties": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Ideas this node will work on.",
+            "title": "Items"
+          },
+          "iteration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Iteration"
+          },
+          "node": {
+            "title": "Node",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node"
+        ],
+        "title": "AgentStarted",
+        "type": "object"
+      },
+      "AgentStartedEvent": {
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Agent"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AgentStarted"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "agent.started",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "ts",
+          "type",
+          "data"
+        ],
+        "title": "AgentStartedEvent",
+        "type": "object"
+      },
+      "AgentThought": {
+        "description": "A short progress note written by the node itself (not model reasoning).",
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "AgentThought",
+        "type": "object"
+      },
+      "AgentThoughtEvent": {
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Agent"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AgentThought"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "agent.thought",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "ts",
+          "type",
+          "data"
+        ],
+        "title": "AgentThoughtEvent",
+        "type": "object"
+      },
+      "AgentToolCall": {
+        "properties": {
+          "idea_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Idea Key"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "result_count": {
+            "title": "Result Count",
+            "type": "integer"
+          },
+          "tool": {
+            "const": "search",
+            "title": "Tool",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool",
+          "query",
+          "result_count"
+        ],
+        "title": "AgentToolCall",
+        "type": "object"
+      },
+      "AgentToolCallEvent": {
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Agent"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AgentToolCall"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "agent.tool_call",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "ts",
+          "type",
+          "data"
+        ],
+        "title": "AgentToolCallEvent",
+        "type": "object"
+      },
+      "BudgetExhausted": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "tokens",
+              "searches"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "used": {
+            "title": "Used",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "used",
+          "limit"
+        ],
+        "title": "BudgetExhausted",
+        "type": "object"
+      },
+      "BudgetExhaustedEvent": {
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Agent"
+          },
+          "data": {
+            "$ref": "#/components/schemas/BudgetExhausted"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "budget.exhausted",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "ts",
+          "type",
+          "data"
+        ],
+        "title": "BudgetExhaustedEvent",
+        "type": "object"
+      },
+      "BudgetRequest": {
+        "description": "Optional per-run caps. They can only lower the server's limits, never raise them.",
+        "properties": {
+          "max_searches": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Searches"
+          },
+          "max_tokens": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Tokens"
+          }
+        },
+        "title": "BudgetRequest",
+        "type": "object"
+      },
+      "BudgetUsage": {
+        "properties": {
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "max_searches": {
+            "title": "Max Searches",
+            "type": "integer"
+          },
+          "max_tokens": {
+            "title": "Max Tokens",
+            "type": "integer"
+          },
+          "searches_used": {
+            "title": "Searches Used",
+            "type": "integer"
+          },
+          "tokens_used": {
+            "title": "Tokens Used",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "max_tokens",
+          "tokens_used",
+          "max_searches",
+          "searches_used",
+          "cost_usd"
+        ],
+        "title": "BudgetUsage",
+        "type": "object"
+      },
+      "BudgetWarning": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "tokens",
+              "searches"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "used": {
+            "title": "Used",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "used",
+          "limit"
+        ],
+        "title": "BudgetWarning",
+        "type": "object"
+      },
+      "BudgetWarningEvent": {
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Agent"
+          },
+          "data": {
+            "$ref": "#/components/schemas/BudgetWarning"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "budget.warning",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "ts",
+          "type",
+          "data"
+        ],
+        "title": "BudgetWarningEvent",
+        "type": "object"
+      },
+      "Competitor": {
+        "properties": {
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "positioning": {
+            "maxLength": 400,
+            "minLength": 3,
+            "title": "Positioning",
+            "type": "string"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourcedFigure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "name",
+          "positioning"
+        ],
+        "title": "Competitor",
+        "type": "object"
+      },
+      "CreateRunRequest": {
+        "properties": {
+          "budget": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BudgetRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "constraints": {
+            "$ref": "#/components/schemas/RunConstraints"
+          },
+          "mode": {
+            "enum": [
+              "seeded",
+              "autonomous"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "CreateRunRequest",
+        "type": "object"
+      },
+      "CreateRunResponse": {
+        "properties": {
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          }
+        },
+        "required": [
+          "run_id",
+          "status"
+        ],
+        "title": "CreateRunResponse",
+        "type": "object"
+      },
+      "CritiqueScorecard": {
+        "properties": {
+          "attack_summary": {
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Attack Summary",
+            "type": "string"
+          },
+          "most_likely_failure_cause": {
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Most Likely Failure Cause",
+            "type": "string"
+          },
+          "opportunity_id": {
+            "title": "Opportunity Id",
+            "type": "string"
+          },
+          "scores": {
+            "items": {
+              "$ref": "#/components/schemas/RubricScore"
+            },
+            "maxItems": 7,
+            "minItems": 7,
+            "title": "Scores",
+            "type": "array"
+          }
+        },
+        "required": [
+          "scores",
+          "most_likely_failure_cause",
+          "attack_summary",
+          "opportunity_id"
+        ],
+        "title": "CritiqueScorecard",
+        "type": "object"
+      },
+      "CustomerSegment": {
+        "properties": {
+          "description": {
+            "maxLength": 400,
+            "minLength": 5,
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourcedFigure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ],
+        "title": "CustomerSegment",
+        "type": "object"
+      },
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "details": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody",
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "Event": {
+        "discriminator": {
+          "mapping": {
+            "agent.completed": "#/components/schemas/AgentCompletedEvent",
+            "agent.started": "#/components/schemas/AgentStartedEvent",
+            "agent.thought": "#/components/schemas/AgentThoughtEvent",
+            "agent.tool_call": "#/components/schemas/AgentToolCallEvent",
+            "budget.exhausted": "#/components/schemas/BudgetExhaustedEvent",
+            "budget.warning": "#/components/schemas/BudgetWarningEvent",
+            "idea.created": "#/components/schemas/IdeaCreatedEvent",
+            "idea.updated": "#/components/schemas/IdeaUpdatedEvent",
+            "run.completed": "#/components/schemas/RunCompletedEvent",
+            "run.error": "#/components/schemas/RunErrorEvent",
+            "run.interrupted": "#/components/schemas/RunInterruptedEvent",
+            "run.resumed": "#/components/schemas/RunResumedEvent",
+            "run.status": "#/components/schemas/RunStatusEvent"
+          },
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/RunStatusEvent"
+          },
+          {
+            "$ref": "#/components/schemas/RunInterruptedEvent"
+          },
+          {
+            "$ref": "#/components/schemas/RunResumedEvent"
+          },
+          {
+            "$ref": "#/components/schemas/RunCompletedEvent"
+          },
+          {
+            "$ref": "#/components/schemas/RunErrorEvent"
+          },
+          {
+            "$ref": "#/components/schemas/AgentStartedEvent"
+          },
+          {
+            "$ref": "#/components/schemas/AgentThoughtEvent"
+          },
+          {
+            "$ref": "#/components/schemas/AgentToolCallEvent"
+          },
+          {
+            "$ref": "#/components/schemas/AgentCompletedEvent"
+          },
+          {
+            "$ref": "#/components/schemas/IdeaCreatedEvent"
+          },
+          {
+            "$ref": "#/components/schemas/IdeaUpdatedEvent"
+          },
+          {
+            "$ref": "#/components/schemas/BudgetWarningEvent"
+          },
+          {
+            "$ref": "#/components/schemas/BudgetExhaustedEvent"
+          }
+        ]
+      },
+      "FounderProfile": {
+        "properties": {
+          "capital_usd": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capital Usd"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "rejected_idea_reasons": {
+            "description": "Reasons from earlier rejections; Mode B steers away from these.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Rejected Idea Reasons",
+            "type": "array"
+          },
+          "risk_tolerance": {
+            "default": "medium",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Risk Tolerance",
+            "type": "string"
+          },
+          "skills": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Skills",
+            "type": "array"
+          },
+          "weekly_hours": {
+            "anyOf": [
+              {
+                "maximum": 168.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weekly Hours"
+          }
+        },
+        "title": "FounderProfile",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "db": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Db",
+            "type": "string"
+          },
+          "redis": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Redis",
+            "type": "string"
+          }
+        },
+        "required": [
+          "db",
+          "redis"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "IdeaCreated": {
+        "properties": {
+          "composite_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Composite Score"
+          },
+          "idea_id": {
+            "format": "uuid",
+            "title": "Idea Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "idea_id",
+          "key",
+          "title",
+          "rank",
+          "composite_score",
+          "version"
+        ],
+        "title": "IdeaCreated",
+        "type": "object"
+      },
+      "IdeaCreatedEvent": {
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Agent"
+          },
+          "data": {
+            "$ref": "#/components/schemas/IdeaCreated"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "idea.created",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "ts",
+          "type",
+          "data"
+        ],
+        "title": "IdeaCreatedEvent",
+        "type": "object"
+      },
+      "IdeaStatus": {
+        "enum": [
+          "active",
+          "rejected",
+          "merged",
+          "selected"
+        ],
+        "title": "IdeaStatus",
+        "type": "string"
+      },
+      "IdeaUpdated": {
+        "properties": {
+          "composite_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Composite Score"
+          },
+          "idea_id": {
+            "format": "uuid",
+            "title": "Idea Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "idea_id",
+          "version"
+        ],
+        "title": "IdeaUpdated",
+        "type": "object"
+      },
+      "IdeaUpdatedEvent": {
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Agent"
+          },
+          "data": {
+            "$ref": "#/components/schemas/IdeaUpdated"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "idea.updated",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "ts",
+          "type",
+          "data"
+        ],
+        "title": "IdeaUpdatedEvent",
+        "type": "object"
+      },
+      "IdeaVersionSource": {
+        "enum": [
+          "agent",
+          "cowork",
+          "merge",
+          "rescore"
+        ],
+        "title": "IdeaVersionSource",
+        "type": "string"
+      },
+      "IdeaView": {
+        "properties": {
+          "analysis": {
+            "$ref": "#/components/schemas/MarketAnalysis"
+          },
+          "composite_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Composite Score"
+          },
+          "critique": {
+            "$ref": "#/components/schemas/CritiqueScorecard"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "opportunity": {
+            "$ref": "#/components/schemas/RawOpportunity"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          },
+          "status": {
+            "$ref": "#/components/schemas/IdeaStatus"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "version_source": {
+            "$ref": "#/components/schemas/IdeaVersionSource"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "status",
+          "rank",
+          "composite_score",
+          "version",
+          "version_source",
+          "title",
+          "opportunity",
+          "analysis",
+          "critique"
+        ],
+        "title": "IdeaView",
+        "type": "object"
+      },
+      "MarketAnalysis": {
+        "properties": {
+          "competitors": {
+            "items": {
+              "$ref": "#/components/schemas/Competitor"
+            },
+            "maxItems": 8,
+            "title": "Competitors",
+            "type": "array"
+          },
+          "opportunity_id": {
+            "title": "Opportunity Id",
+            "type": "string"
+          },
+          "pricing_benchmarks": {
+            "items": {
+              "$ref": "#/components/schemas/PricingBenchmark"
+            },
+            "maxItems": 8,
+            "title": "Pricing Benchmarks",
+            "type": "array"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerSegment"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Segments",
+            "type": "array"
+          },
+          "sizing": {
+            "$ref": "#/components/schemas/MarketSizing"
+          },
+          "summary": {
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sizing",
+          "competitors",
+          "pricing_benchmarks",
+          "segments",
+          "summary",
+          "opportunity_id"
+        ],
+        "title": "MarketAnalysis",
+        "type": "object"
+      },
+      "MarketSizing": {
+        "properties": {
+          "method": {
+            "enum": [
+              "top_down",
+              "bottom_up",
+              "value_theory"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "method_explanation": {
+            "maxLength": 800,
+            "minLength": 10,
+            "title": "Method Explanation",
+            "type": "string"
+          },
+          "sam": {
+            "$ref": "#/components/schemas/SourcedFigure"
+          },
+          "som": {
+            "$ref": "#/components/schemas/SourcedFigure"
+          },
+          "tam": {
+            "$ref": "#/components/schemas/SourcedFigure"
+          }
+        },
+        "required": [
+          "method",
+          "method_explanation",
+          "tam",
+          "sam",
+          "som"
+        ],
+        "title": "MarketSizing",
+        "type": "object"
+      },
+      "PricingBenchmark": {
+        "properties": {
+          "billing": {
+            "enum": [
+              "one_time",
+              "monthly",
+              "annual",
+              "per_use",
+              "commission"
+            ],
+            "title": "Billing",
+            "type": "string"
+          },
+          "price": {
+            "$ref": "#/components/schemas/SourcedFigure"
+          },
+          "product": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Product",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product",
+          "price",
+          "billing"
+        ],
+        "title": "PricingBenchmark",
+        "type": "object"
+      },
+      "ProfileResponse": {
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/FounderProfile"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "profile",
+          "updated_at"
+        ],
+        "title": "ProfileResponse",
+        "type": "object"
+      },
+      "RawOpportunity": {
+        "properties": {
+          "business_model": {
+            "enum": [
+              "b2b",
+              "b2c",
+              "b2b2c"
+            ],
+            "title": "Business Model",
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "industry": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Industry",
+            "type": "string"
+          },
+          "is_generic": {
+            "description": "True for undifferentiated ideas such as \"AI chatbot for X\".",
+            "title": "Is Generic",
+            "type": "boolean"
+          },
+          "iteration": {
+            "description": "Scout pass that produced this opportunity.",
+            "minimum": 1.0,
+            "title": "Iteration",
+            "type": "integer"
+          },
+          "novelty_score": {
+            "description": "10 = clearly not already crowded.",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Novelty Score",
+            "type": "integer"
+          },
+          "one_liner": {
+            "maxLength": 300,
+            "minLength": 10,
+            "title": "One Liner",
+            "type": "string"
+          },
+          "problem": {
+            "maxLength": 800,
+            "minLength": 10,
+            "title": "Problem",
+            "type": "string"
+          },
+          "signal_strength": {
+            "description": "10 = several independent, specific signals; 1 = generic idea.",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Signal Strength",
+            "type": "integer"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/SignalSource"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Signals",
+            "type": "array"
+          },
+          "target_customer": {
+            "maxLength": 300,
+            "minLength": 3,
+            "title": "Target Customer",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 120,
+            "minLength": 3,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "one_liner",
+          "problem",
+          "target_customer",
+          "industry",
+          "business_model",
+          "signals",
+          "novelty_score",
+          "signal_strength",
+          "is_generic",
+          "id",
+          "iteration"
+        ],
+        "title": "RawOpportunity",
+        "type": "object"
+      },
+      "RubricScore": {
+        "description": "1-10 where 10 is always the favourable end (lowest risk / best outlook).",
+        "properties": {
+          "dimension": {
+            "enum": [
+              "cac_risk",
+              "channel_dependency",
+              "churn_risk",
+              "defensibility",
+              "regulatory_risk",
+              "time_to_first_revenue",
+              "solo_founder_feasibility"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          },
+          "justification": {
+            "description": "One sentence.",
+            "maxLength": 300,
+            "minLength": 5,
+            "title": "Justification",
+            "type": "string"
+          },
+          "score": {
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Score",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dimension",
+          "score",
+          "justification"
+        ],
+        "title": "RubricScore",
+        "type": "object"
+      },
+      "RunCompleted": {
+        "properties": {},
+        "title": "RunCompleted",
+        "type": "object"
+      },
+      "RunCompletedEvent": {
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Agent"
+          },
+          "data": {
+            "$ref": "#/components/schemas/RunCompleted"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "run.completed",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "ts",
+          "type",
+          "data"
+        ],
+        "title": "RunCompletedEvent",
+        "type": "object"
+      },
+      "RunConstraints": {
+        "properties": {
+          "budget_ceiling_usd": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Ceiling Usd"
+          },
+          "business_model": {
+            "default": "any",
+            "enum": [
+              "b2b",
+              "b2c",
+              "any"
+            ],
+            "title": "Business Model",
+            "type": "string"
+          },
+          "excluded_industries": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Excluded Industries",
+            "type": "array"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "solo_founder": {
+            "default": false,
+            "title": "Solo Founder",
+            "type": "boolean"
+          }
+        },
+        "title": "RunConstraints",
+        "type": "object"
+      },
+      "RunDetail": {
+        "properties": {
+          "budget": {
+            "$ref": "#/components/schemas/BudgetUsage"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "ideas": {
+            "items": {
+              "$ref": "#/components/schemas/IdeaView"
+            },
+            "title": "Ideas",
+            "type": "array"
+          },
+          "input": {
+            "$ref": "#/components/schemas/RunInput"
+          },
+          "mode": {
+            "enum": [
+              "seeded",
+              "autonomous"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "shortfall": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shortfall"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "viable_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viable Count"
+          }
+        },
+        "required": [
+          "id",
+          "mode",
+          "seed",
+          "status",
+          "error",
+          "viable_count",
+          "created_at",
+          "updated_at",
+          "started_at",
+          "finished_at",
+          "input",
+          "shortfall",
+          "budget",
+          "ideas"
+        ],
+        "title": "RunDetail",
+        "type": "object"
+      },
+      "RunErrorEvent": {
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Agent"
+          },
+          "data": {
+            "$ref": "#/components/schemas/RunErrored"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "run.error",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "ts",
+          "type",
+          "data"
+        ],
+        "title": "RunErrorEvent",
+        "type": "object"
+      },
+      "RunErrorInfo": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "RunErrorInfo",
+        "type": "object"
+      },
+      "RunErrored": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "RunErrored",
+        "type": "object"
+      },
+      "RunInput": {
+        "properties": {
+          "constraints": {
+            "$ref": "#/components/schemas/RunConstraints"
+          },
+          "founder_profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FounderProfile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mode": {
+            "enum": [
+              "seeded",
+              "autonomous"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "RunInput",
+        "type": "object"
+      },
+      "RunInterrupted": {
+        "properties": {
+          "idea_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Idea Ids",
+            "type": "array"
+          },
+          "shortfall": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Shortfall"
+          },
+          "viable_count": {
+            "title": "Viable Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "viable_count",
+          "idea_ids"
+        ],
+        "title": "RunInterrupted",
+        "type": "object"
+      },
+      "RunInterruptedEvent": {
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Agent"
+          },
+          "data": {
+            "$ref": "#/components/schemas/RunInterrupted"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "run.interrupted",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "ts",
+          "type",
+          "data"
+        ],
+        "title": "RunInterruptedEvent",
+        "type": "object"
+      },
+      "RunList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RunSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "RunList",
+        "type": "object"
+      },
+      "RunResumed": {
+        "properties": {
+          "selected_idea_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Selected Idea Id"
+          }
+        },
+        "title": "RunResumed",
+        "type": "object"
+      },
+      "RunResumedEvent": {
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Agent"
+          },
+          "data": {
+            "$ref": "#/components/schemas/RunResumed"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "run.resumed",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "ts",
+          "type",
+          "data"
+        ],
+        "title": "RunResumedEvent",
+        "type": "object"
+      },
+      "RunStatus": {
+        "enum": [
+          "queued",
+          "running",
+          "awaiting_human",
+          "completed",
+          "failed",
+          "budget_exhausted"
+        ],
+        "title": "RunStatus",
+        "type": "string"
+      },
+      "RunStatusChanged": {
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Detail"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunStatus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "RunStatusChanged",
+        "type": "object"
+      },
+      "RunStatusEvent": {
+        "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Agent"
+          },
+          "data": {
+            "$ref": "#/components/schemas/RunStatusChanged"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          },
+          "type": {
+            "const": "run.status",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "ts",
+          "type",
+          "data"
+        ],
+        "title": "RunStatusEvent",
+        "type": "object"
+      },
+      "RunSummary": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "seeded",
+              "autonomous"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "viable_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viable Count"
+          }
+        },
+        "required": [
+          "id",
+          "mode",
+          "seed",
+          "status",
+          "error",
+          "viable_count",
+          "created_at",
+          "updated_at",
+          "started_at",
+          "finished_at"
+        ],
+        "title": "RunSummary",
+        "type": "object"
+      },
+      "SignalSource": {
+        "properties": {
+          "category": {
+            "enum": [
+              "rising_search",
+              "funding_round",
+              "new_regulation",
+              "complaint_thread",
+              "manual_work_job_posting",
+              "marketplace_gap",
+              "seed_research"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "evidence": {
+            "description": "What this source shows.",
+            "maxLength": 400,
+            "minLength": 3,
+            "title": "Evidence",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "url",
+          "evidence"
+        ],
+        "title": "SignalSource",
+        "type": "object"
+      },
+      "SourcedFigure": {
+        "description": "A number that is either backed by a URL or explicitly labelled as an estimate.",
+        "properties": {
+          "assumption": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required when there is no source_url: how the estimate was derived.",
+            "title": "Assumption"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "unit": {
+            "description": "e.g. \"USD\", \"USD/month\", \"users\".",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "minimum": 0.0,
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "value",
+          "unit"
+        ],
+        "title": "SourcedFigure",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "AutoIncubator",
+    "version": "0.2.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/incubator/profile": {
+      "get": {
+        "description": "The saved founder profile, or defaults (`updated_at: null`) if none was saved.",
+        "operationId": "get_profile_api_incubator_profile_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Get Profile",
+        "tags": [
+          "profile"
+        ]
+      },
+      "put": {
+        "description": "Replaces the founder profile. Mode B runs snapshot it when they are created.",
+        "operationId": "put_profile_api_incubator_profile_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FounderProfile"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Put Profile",
+        "tags": [
+          "profile"
+        ]
+      }
+    },
+    "/api/incubator/runs": {
+      "get": {
+        "operationId": "list_runs_api_incubator_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "List Runs",
+        "tags": [
+          "runs"
+        ]
+      },
+      "post": {
+        "description": "Queues a run; the worker executes it. Progress arrives on `/runs/{id}/stream`.",
+        "operationId": "create_run_api_incubator_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateRunResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Create Run",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/incubator/runs/{run_id}": {
+      "get": {
+        "operationId": "get_run_api_incubator_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Get Run",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/api/incubator/runs/{run_id}/stream": {
+      "get": {
+        "description": "Server-sent events for one run, in order, each with `id:` = the event id.\n\nReplays every event after `Last-Event-ID` (header, as sent by EventSource on\nreconnect, or `?last_event_id=`), then streams live. Each `data:` is one JSON `Event`\nenvelope. Comment pings keep idle connections open. The stream closes once the run is\n`completed`, `failed` or `budget_exhausted` and every event has been sent.",
+        "operationId": "stream_run_api_incubator_runs__run_id__stream_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Initial cursor; the header wins when both are set.",
+            "in": "query",
+            "name": "last_event_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Initial cursor; the header wins when both are set.",
+              "title": "Last Event Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Last-Event-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "properties": {
+                    "data": {
+                      "contentMediaType": "application/json",
+                      "contentSchema": {
+                        "$ref": "#/components/schemas/Event"
+                      },
+                      "type": "string"
+                    },
+                    "event": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "description": "The event id; send back as Last-Event-ID.",
+                      "type": "string"
+                    },
+                    "retry": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Stream Run",
+        "tags": [
+          "runs"
+        ]
+      }
+    }
+  }
+}
