@@ -1,4 +1,8 @@
-"""Builds the Phase-1 graph: scout → analyst → skeptic → rank ⟲ → checkpoint → Phase-2 stubs."""
+"""Builds the graph: scout → analyst → skeptic → rank ⟲ → checkpoint → Phase 2.
+
+Phase 2 fans out to the Product Architect, GTM Strategist and Financial Modeler in
+parallel, then fans in to the Editor.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +11,10 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from app.agents.analyst.node import analyst_node
+from app.agents.editor.node import editor_node
+from app.agents.financial_modeler.node import financial_modeler_node
+from app.agents.gtm_strategist.node import gtm_strategist_node
+from app.agents.product_architect.node import product_architect_node
 from app.agents.scout.node import scout_node
 from app.agents.skeptic.node import skeptic_node
 from app.graph.checkpoint import checkpoint_node
@@ -14,7 +22,9 @@ from app.graph.deps import GraphDeps
 from app.graph.ranking import rank_node
 from app.graph.routing import route_after_rank
 from app.graph.state import Phase1State
-from app.graph.stubs import PHASE2_EDITOR, PHASE2_PARALLEL, Phase2Stub
+
+PHASE2_PARALLEL = ("product_architect", "gtm_strategist", "financial_modeler")
+PHASE2_EDITOR = "editor"
 
 type IncubatorGraph = CompiledStateGraph[Phase1State, GraphDeps, Phase1State, Phase1State]
 
@@ -26,8 +36,10 @@ def build_graph() -> StateGraph[Phase1State, GraphDeps, Phase1State, Phase1State
     g.add_node("skeptic", skeptic_node)
     g.add_node("rank", rank_node)
     g.add_node("checkpoint", checkpoint_node)
-    for name in (*PHASE2_PARALLEL, PHASE2_EDITOR):
-        g.add_node(name, Phase2Stub(name))
+    g.add_node("product_architect", product_architect_node)
+    g.add_node("gtm_strategist", gtm_strategist_node)
+    g.add_node("financial_modeler", financial_modeler_node)
+    g.add_node(PHASE2_EDITOR, editor_node)
 
     g.add_edge(START, "scout")
     g.add_edge("scout", "analyst")

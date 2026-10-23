@@ -1,7 +1,7 @@
 """Finance engine against a hand-calculated reference case (tests/factories.assumption_set).
 
 Reference inputs: tiers $20 and $60 at 50/50, payment fee 5%, variable cost $6, churn 5%,
-channels "Search ads" (CAC $100, $1,000/mo) and "Content" (CAC $50, $500/mo), 100 organic
+channels paid_search (CAC $100, $1,000/mo) and content_seo (CAC $50, $500/mo), 100 organic
 signups growing 10%/mo with 10% free→paid, fixed costs $2,500/mo, cash $20,000, launch month 2.
 
 By hand:
@@ -154,12 +154,12 @@ def test_without_paid_channels_cac_metrics_are_none() -> None:
     [
         ({"monthly_churn": f.assumed(0, "share")}, "monthly_churn must be at least"),
         ({"free_to_paid": f.assumed(1.5, "share")}, "free_to_paid is a fraction"),
-        ({"channels": [{"channel": "Ads", "cac": f.assumed(0, "USD"),
+        ({"channels": [{"channel": "paid_social", "cac": f.assumed(0, "USD"),
                         "monthly_spend": f.assumed(10, "USD")}]}, "cac must be greater"),
-        ({"channels": [{"channel": "Search ads", "cac": f.assumed(1, "USD"),
+        ({"channels": [{"channel": "paid_search", "cac": f.assumed(1, "USD"),
                         "monthly_spend": f.assumed(1, "USD")},
-                       {"channel": "search-ads", "cac": f.assumed(1, "USD"),
-                        "monthly_spend": f.assumed(1, "USD")}]}, "channel names must be unique"),
+                       {"channel": "paid_search", "cac": f.assumed(1, "USD"),
+                        "monthly_spend": f.assumed(1, "USD")}]}, "may appear only once"),
         ({"price_tiers": [{"name": "Only", "price_monthly": f.assumed(9, "USD"),
                            "mix": f.assumed(0.9, "share")}]}, "mix must sum to 1"),
     ],

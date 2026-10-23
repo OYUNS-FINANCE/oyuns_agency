@@ -1,4 +1,4 @@
-"""Phase-1 graph state and its reducers. See ADR 0002."""
+"""Graph state (Phase 1, the checkpoint and Phase 2) and its reducers. See ADR 0002."""
 
 from __future__ import annotations
 
@@ -9,9 +9,14 @@ from typing import Annotated, TypedDict
 from app.agents.analyst.schemas import MarketAnalysis
 from app.agents.common.brief import IdeaBrief
 from app.agents.common.schemas import RunInput
+from app.agents.editor.schemas import BusinessPlan
+from app.agents.financial_modeler.schemas import AssumptionSet
+from app.agents.gtm_strategist.schemas import GtmPlan
+from app.agents.product_architect.schemas import ProductPlan
 from app.agents.scout.schemas import RawOpportunity
 from app.agents.skeptic.schemas import CritiqueScorecard
 from app.providers.llm.base import UsageRecord
+from app.services.finance import FinancialModel
 
 
 def merge_by_id(
@@ -52,5 +57,10 @@ class Phase1State(TypedDict, total=False):
     """Application id (`ideas.id`) of the founder's choice."""
     selected_brief: IdeaBrief | None
     """The selected idea at its latest version; what Phase 2 develops."""
-    phase2: Annotated[dict[str, str], merge_dict]
-    """Phase-2 stub markers (node name → status) until Phase 5 replaces the stubs."""
+    product: ProductPlan
+    gtm: GtmPlan
+    assumptions: AssumptionSet
+    financials: FinancialModel
+    """Computed by the engine from `assumptions`; never by the LLM."""
+    plan: BusinessPlan
+    """The Editor's assembled plan; the worker persists it as `business_plans` v1."""

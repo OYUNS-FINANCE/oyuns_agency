@@ -32,6 +32,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.agents.common.schemas import ChannelType
 from app.agents.financial_modeler.schemas import HORIZON_MONTHS, AssumptionSet
 
 ScenarioName = Literal["base", "bear", "bull"]
@@ -69,7 +70,7 @@ class UnitEconomics(BaseModel):
 
 
 class ChannelEconomics(BaseModel):
-    channel: str
+    channel: ChannelType
     cac: float
     monthly_spend: float
     new_customers_per_month: float
@@ -183,7 +184,7 @@ FORMULAS: dict[str, str] = {
 
 @dataclass(frozen=True)
 class _Channel:
-    name: str
+    name: ChannelType
     cac: float
     spend: float
 

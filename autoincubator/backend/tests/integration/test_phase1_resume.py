@@ -16,11 +16,11 @@ from langchain_core.runnables import RunnableConfig
 from app.agents.analyst.schemas import MarketAnalysis
 from app.agents.common.brief import IdeaBrief
 from app.agents.common.schemas import RunInput
+from app.agents.editor.schemas import BusinessPlan
 from app.agents.scout.schemas import RawOpportunity
 from app.core.config import get_settings
 from app.graph.builder import compile_graph
 from app.graph.checkpointer import postgres_checkpointer
-from app.graph.stubs import PHASE2_EDITOR, PHASE2_PARALLEL, STUB_STATUS
 
 pytestmark = pytest.mark.integration
 
@@ -76,6 +76,13 @@ async def test_interrupt_then_resume_from_a_new_process() -> None:
     assert resumed["status"] == "completed"
     assert resumed["next"] == []
     assert resumed["selected_idea_id"] == selected
-    assert resumed["phase2"] == dict.fromkeys((*PHASE2_PARALLEL, PHASE2_EDITOR), STUB_STATUS)
-    # Resume did not re-run Phase-1 agents: usage is unchanged.
-    assert resumed["usage"] == paused["usage"]
+    assert resumed["plan"]["brief"]["opportunity"]["id"] == selected
+    assert resumed["plan"]["contradictions"] == []
+    # Resume did not re-run Phase-1 agents: only the four Phase-2 calls were added.
+    assert resumed["usage"]["calls"] == paused["usage"]["calls"] + 4
+
+    # The plan, with its nested finance models, comes back typed in another process.
+    async with postgres_checkpointer(get_settings()) as saver:
+        done = await compile_graph(saver).aget_state(config)
+    assert isinstance(done.values["plan"], BusinessPlan)
+    assert done.values["plan"].financials.base.months[-1].month == 12

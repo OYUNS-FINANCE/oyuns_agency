@@ -110,7 +110,8 @@ async def main(args: argparse.Namespace) -> dict[str, Any]:
         out["checkpoint"] = snapshot.interrupts[0].value
     else:
         out["selected_idea_id"] = values.get("selected_idea_id")
-        out["phase2"] = values.get("phase2", {})
+        plan = values.get("plan")
+        out["plan"] = plan.model_dump(mode="json") if plan is not None else None
     return out
 
 

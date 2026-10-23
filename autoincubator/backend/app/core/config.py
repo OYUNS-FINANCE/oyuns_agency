@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     scout_model: str = DEFAULT_MODEL
     analyst_model: str = DEFAULT_MODEL
     skeptic_model: str = DEFAULT_MODEL
+    product_architect_model: str = DEFAULT_MODEL
+    gtm_strategist_model: str = DEFAULT_MODEL
+    financial_modeler_model: str = DEFAULT_MODEL
+    editor_model: str = DEFAULT_MODEL
     llm_max_validation_retries: int = Field(default=2, ge=0)
     fake_llm_latency_ms: int = Field(default=0, ge=0)
     """Artificial delay per FakeLLM call: makes offline runs observable live (UI, kill tests)."""

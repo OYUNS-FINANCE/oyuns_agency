@@ -8,15 +8,18 @@ from typing import Any
 from langgraph.runtime import Runtime
 
 from app.agents.analyst.schemas import MarketAnalysis, MarketAnalysisOutput
+from app.agents.common.brief import IdeaBrief
 from app.agents.common.schemas import RunInput
 from app.agents.financial_modeler.schemas import AssumptionSet
+from app.agents.gtm_strategist.schemas import GtmPlan
+from app.agents.product_architect.schemas import ProductPlan
 from app.agents.scout.schemas import RawOpportunity, ScoutCandidate, ScoutQueryPlan
 from app.agents.skeptic.schemas import RUBRIC_DIMENSIONS, CritiqueOutput, CritiqueScorecard
 from app.core.config import Settings
 from app.events.sink import EventSink, NullEventSink
 from app.graph.deps import GraphDeps
 from app.providers.dedup import JaccardDeduplicator
-from app.providers.llm.fake import FakeLLM, Scripted
+from app.providers.llm.fake import FakeLLM, Scripted, phase2_responder
 from app.providers.search.mock import MockSearchProvider
 from app.services.brief_patch import EditableBrief
 
@@ -50,7 +53,9 @@ def deps(
 ) -> GraphDeps:
     s = settings(**setting_overrides)
     return GraphDeps(
-        llm=FakeLLM(script, max_validation_retries=s.llm_max_validation_retries),
+        llm=FakeLLM(
+            script, responder=phase2_responder, max_validation_retries=s.llm_max_validation_retries
+        ),
         search=search or MockSearchProvider(),
         dedup=JaccardDeduplicator(s.dedup_threshold),
         settings=s,
@@ -187,9 +192,9 @@ def assumption_set(**overrides: Any) -> AssumptionSet:
              "mix": assumed(0.5, "share")},
         ],
         "channels": [
-            {"channel": "Search ads", "cac": assumed(100, "USD"),
+            {"channel": "paid_search", "cac": assumed(100, "USD"),
              "monthly_spend": assumed(1000, "USD/month")},
-            {"channel": "Content", "cac": assumed(50, "USD"),
+            {"channel": "content_seo", "cac": assumed(50, "USD"),
              "monthly_spend": assumed(500, "USD/month")},
         ],
         "organic_signups_m1": assumed(100, "signups"),
@@ -207,3 +212,65 @@ def assumption_set(**overrides: Any) -> AssumptionSet:
         "launch_rationale": "One month to finish and test the MVP before charging.",
     }  # fmt: skip
     return AssumptionSet.model_validate({**base, **overrides})
+
+
+def idea_brief(oid: str = "opp-01", title: str = "Dental reminders", **opp: Any) -> IdeaBrief:
+    return IdeaBrief(
+        rank=1,
+        composite_score=7.0,
+        opportunity=opportunity(oid, title, **opp),
+        analysis=market_analysis(oid),
+        critique=scorecard(oid),
+    )
+
+
+def product_plan(build_weeks: float = 6, now_days: Sequence[float] = (10, 10, 10)) -> ProductPlan:
+    features = [
+        {
+            "name": f"Feature {chr(65 + i)}",
+            "description": "Does one useful thing.",
+            "scope": "now",
+            "estimate_days": d,
+        }
+        for i, d in enumerate(now_days)
+    ]
+    features.append(
+        {
+            "name": "Later thing",
+            "description": "Waits for traction.",
+            "scope": "later",
+            "estimate_days": 20,
+        }
+    )
+    return ProductPlan.model_validate({
+        "mvp_summary": "A small first version that runs the core workflow.",
+        "features": features,
+        "architecture": "A web app with a relational database and a job queue.",
+        "components": [{"name": "Web app", "responsibility": "UI and HTTP API."}],
+        "data_model": [{"name": "Account", "fields": ["id", "name"]}],
+        "stack": [{"layer": "backend", "choice": "FastAPI", "why": "Fast to build with."}],
+        "build_estimate_weeks": build_weeks,
+        "build_estimate_basis": "Sum of the feature estimates.",
+    })  # fmt: skip
+
+
+def gtm_plan(
+    channels: Sequence[tuple[str, float]] = (("content_seo", 50), ("paid_search", 100)),
+) -> GtmPlan:
+    return GtmPlan.model_validate({
+        "positioning": "The simplest way for clinics to stop no-shows.",
+        "icp": {"description": "Independent clinics with front-desk staff.",
+                "attributes": ["Owner-run"], "pains": ["No-shows"],
+                "buying_trigger": "A bad month of no-shows."},
+        "channels": [
+            {"channel": kind, "rationale": "Where clinic owners look for help.",
+             "expected_cac": assumed(cac, "USD")}
+            for kind, cac in channels
+        ],
+        "zero_budget_tactics": [{"name": "Outreach", "description": "Personal messages."}],
+        "viral_loops": [],
+        "first_100_customers": [
+            {"step": "Partners", "description": "Recruit design partners."},
+            {"step": "Referrals", "description": "Ask for introductions."},
+        ],
+    })  # fmt: skip

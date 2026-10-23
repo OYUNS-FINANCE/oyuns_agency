@@ -9,15 +9,11 @@ from typing import Self
 from pydantic import BaseModel, Field, model_validator
 
 from app.agents.analyst.schemas import SourcedFigure
+from app.agents.common.schemas import ChannelType
 
 MIX_TOLERANCE = 0.001
 MIN_MONTHLY_CHURN = 0.001
 HORIZON_MONTHS = 12
-
-
-def normalise_channel(name: str) -> str:
-    """The key channels are matched on across agents (GTM ↔ Finance)."""
-    return " ".join(name.lower().replace("-", " ").replace("_", " ").split())
 
 
 class PriceTier(BaseModel):
@@ -27,9 +23,7 @@ class PriceTier(BaseModel):
 
 
 class ChannelAssumption(BaseModel):
-    channel: str = Field(
-        min_length=2, max_length=80, description="Must match a GTM channel name exactly."
-    )
+    channel: ChannelType = Field(description="Matched against the GTM Strategist's channels.")
     cac: SourcedFigure = Field(description="USD spent per new paying customer; must be > 0.")
     monthly_spend: SourcedFigure = Field(description="USD per month from launch onwards.")
 
@@ -81,9 +75,9 @@ class AssumptionSet(BaseModel):
         for c in self.channels:
             if c.cac.value <= 0:
                 raise ValueError(f"channel {c.channel!r}: cac must be greater than 0")
-        names = [normalise_channel(c.channel) for c in self.channels]
+        names = [c.channel for c in self.channels]
         if len(set(names)) != len(names):
-            raise ValueError("channel names must be unique")
+            raise ValueError("each channel may appear only once")
         tiers = [t.name.strip().lower() for t in self.price_tiers]
         if len(set(tiers)) != len(tiers):
             raise ValueError("price tier names must be unique")

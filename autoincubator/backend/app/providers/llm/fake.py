@@ -274,7 +274,7 @@ def _analysis(text: str) -> dict[str, Any]:
         "segments": [
             {
                 "name": "Independent operators",
-                "description": "Owner-run businesses with under 20 staff.",
+                "description": "Owner-run businesses with a small team.",
                 "size": None,
             }
         ],
@@ -354,6 +354,171 @@ def _merge(text: str) -> dict[str, Any]:
     }
 
 
+# ---- Phase 2 --------------------------------------------------------------------------
+# Deterministic and mutually consistent by default: GTM and Finance derive the same channels
+# and CACs from the idea title, the MVP adds up to the build estimate, and the launch month
+# leaves time to build it. Prose carries no numbers except figures it quotes.
+
+_PAID_CHANNELS = ("paid_search", "content_seo", "partnerships", "paid_social")
+_MVP_FEATURE_DAYS = 10.0
+_BUILD_WEEKS = 6.0
+_HOURS = re.compile(r"weekly hours available: (\d+)")
+_CAPITAL = re.compile(r"- capital: \$([\d,]+)")
+_KEY_ARPA = re.compile(r"- base: ARPA (\$[\d,.]+)")
+
+
+def _plan_brief(text: str) -> dict[str, Any]:
+    (brief,) = _briefs(text) or [{}]
+    return brief
+
+
+def _channels(title: str) -> list[tuple[str, float]]:
+    h = _h(title, "channels")
+    first = _PAID_CHANNELS[h % len(_PAID_CHANNELS)]
+    second = _PAID_CHANNELS[(h // 7 + 1 + h % len(_PAID_CHANNELS)) % len(_PAID_CHANNELS)]
+    if second == first:
+        second = _PAID_CHANNELS[(_PAID_CHANNELS.index(first) + 1) % len(_PAID_CHANNELS)]
+    return [(first, float(60 + h % 60)), (second, float(130 + h % 80))]
+
+
+def _product(text: str) -> dict[str, Any]:
+    opp = _plan_brief(text).get("opportunity", {})
+    title = str(opp.get("title", "the idea"))
+    now = ["Account and onboarding", "Core workflow", "Notifications and reporting"]
+    return {
+        "mvp_summary": f"A focused first version of {title} that runs the core workflow.",
+        "features": [
+            *(
+                {"name": n, "description": f"{n} for the first customers of the product.",
+                 "scope": "now", "estimate_days": _MVP_FEATURE_DAYS}
+                for n in now
+            ),
+            {"name": "Integrations", "description": "Connectors to tools customers already use.",
+             "scope": "later", "estimate_days": 15.0},
+        ],
+        "architecture": "A server-rendered web app with a relational database, a background "
+        "job queue for notifications, and a thin integration layer.",
+        "components": [
+            {"name": "Web app", "responsibility": "User interface and the HTTP API."},
+            {"name": "Worker", "responsibility": "Scheduled jobs and outgoing notifications."},
+        ],
+        "data_model": [
+            {"name": "Account", "fields": ["id", "name", "plan"], "notes": None},
+            {"name": "Job", "fields": ["id", "account_id", "status", "due_at"], "notes": None},
+        ],
+        "stack": [
+            {"layer": "backend", "choice": "Python with FastAPI",
+             "why": "Fast to build with and simple for one person to operate."},
+            {"layer": "database", "choice": "PostgreSQL",
+             "why": "Reliable, well understood, and enough for years of growth."},
+        ],
+        "build_estimate_weeks": _BUILD_WEEKS,
+        "build_estimate_basis": "Three MVP features at 10 days each, 30 days = 6 weeks full time.",
+    }  # fmt: skip
+
+
+def _gtm(text: str) -> dict[str, Any]:
+    opp = _plan_brief(text).get("opportunity", {})
+    title = str(opp.get("title", "the idea"))
+    customer = str(opp.get("target_customer", "small operators"))
+    return {
+        "positioning": f"{title}: the simplest way for {customer[:200]} to fix the problem.",
+        "icp": {
+            "description": f"{customer[:300]} who feel the problem every week.",
+            "attributes": ["Owner-operated", "Uses spreadsheets today"],
+            "pains": ["Manual follow-up work", "Missed revenue"],
+            "buying_trigger": "A busy season that makes the manual process break.",
+        },
+        "channels": [
+            {"channel": kind, "rationale": f"Reaches {customer[:100]} where they look for help.",
+             "expected_cac": _figure(cac, "USD", None, f"Offline estimate for {kind}.")}
+            for kind, cac in _channels(title)
+        ],
+        "zero_budget_tactics": [
+            {"name": "Founder-led outreach", "description": "Personal messages to operators."},
+        ],
+        "viral_loops": [
+            {"name": "Shared reports", "description": "Shared reports carry a sign-up link."},
+        ],
+        "first_100_customers": [
+            {"step": "Design partners", "description": "Recruit a handful of design partners."},
+            {"step": "Referrals", "description": "Ask each happy customer for two introductions."},
+        ],
+    }  # fmt: skip
+
+
+def _assumptions(text: str) -> dict[str, Any]:
+    brief = _plan_brief(text)
+    title = str(brief.get("opportunity", {}).get("title", "the idea"))
+    benchmarks = brief.get("analysis", {}).get("pricing_benchmarks", [])
+    anchor = float(benchmarks[0]["price"]["value"]) if benchmarks else 39.0
+    hours = _HOURS.search(text)
+    weeks = _BUILD_WEEKS * (40 / int(hours.group(1)) if hours else 1)
+    capital = _CAPITAL.search(text)
+    cash = float(capital.group(1).replace(",", "")) if capital else 25_000.0
+    return {
+        "price_tiers": [
+            {"name": "Basic", "price_monthly": _figure(anchor, "USD/month", None,
+             "Matches the comparable point solution's price."),
+             "mix": _figure(0.7, "share", None, "Most small customers start on Basic.")},
+            {"name": "Pro", "price_monthly": _figure(anchor * 2, "USD/month", None,
+             "Twice the Basic price for teams."),
+             "mix": _figure(0.3, "share", None, "Remaining customers choose Pro.")},
+        ],
+        "channels": [
+            {"channel": kind, "cac": _figure(cac, "USD", None, f"Offline estimate for {kind}."),
+             "monthly_spend": _figure(500.0 * (i + 1), "USD/month", None, "Test budget.")}
+            for i, (kind, cac) in enumerate(_channels(title))
+        ],
+        "organic_signups_m1": _figure(80, "signups", None, "Founder network and launch posts."),
+        "organic_growth": _figure(0.15, "share/month", None, "Word of mouth in a niche."),
+        "free_to_paid": _figure(0.08, "share", None, "Typical SMB trial conversion."),
+        "monthly_churn": _figure(0.04, "share/month", None, "Small-business SaaS churn."),
+        "payment_fee_pct": _figure(0.03, "share", None, "Card processing fee."),
+        "variable_cost_per_customer": _figure(4, "USD/month", None, "Hosting and support."),
+        "fixed_costs": [
+            {"name": "Tools and hosting", "monthly": _figure(400, "USD/month", None, "Tools.")},
+            {"name": "Founder salary", "monthly": _figure(2500, "USD/month", None,
+             "Minimum living cost.")},
+        ],
+        "starting_cash": _figure(cash, "USD", None, "The founder's available capital."),
+        "launch_month": 1 + int(weeks // (52 / 12)),
+        "launch_rationale": "Customers start in the month after the MVP build is finished.",
+    }  # fmt: skip
+
+
+def _editor(text: str) -> dict[str, Any]:
+    brief = _plan_brief(text)
+    title = str(brief.get("opportunity", {}).get("title", "the idea"))
+    failure = str(brief.get("critique", {}).get("most_likely_failure_cause", "Low adoption."))
+    arpa = _KEY_ARPA.search(text)
+    quote = f" Average revenue per account is {arpa.group(1)} in the base case." if arpa else ""
+    return {
+        "executive_summary": (
+            f"{title} is developed here into an offline business plan. The product, "
+            f"go-to-market and financial sections were produced deterministically.{quote} "
+            "Read the bear case before committing."
+        ),
+        "contradictions": [],
+        "risks": [{"risk": failure[:300], "mitigation": "Run paid pilots before building more."}],
+        "checklist": {
+            "day_30": ["Recruit design partners", "Build the core workflow"],
+            "day_60": ["Launch to design partners", "Start the first paid channel"],
+            "day_90": ["Review unit economics", "Decide on the second channel"],
+        },
+    }
+
+
+PHASE2_AGENTS = frozenset({"product_architect", "gtm_strategist", "financial_modeler", "editor"})
+
+
+def phase2_responder(request: LLMRequest[BaseModel], messages: Sequence[ChatMessage]) -> Scripted:
+    """Offline answers for the Phase-2 agents only; tests script Phase 1 explicitly."""
+    if request.agent not in PHASE2_AGENTS:
+        raise LookupError(f"FakeLLM has no scripted response left for agent {request.agent!r}")
+    return offline_responder(request, messages)
+
+
 def offline_responder(request: LLMRequest[BaseModel], messages: Sequence[ChatMessage]) -> Scripted:
     """Plausible, schema-valid answers derived only from the prompt. Used by
     `LLM_PROVIDER=fake` outside tests so the CLI runs end-to-end without a network."""
@@ -372,4 +537,12 @@ def offline_responder(request: LLMRequest[BaseModel], messages: Sequence[ChatMes
             return _merge(text)
         case "cowork.scout" | "cowork.analyst" | "cowork.skeptic":
             return _cowork(request.agent.removeprefix("cowork."), text)
+        case "product_architect":
+            return _product(text)
+        case "gtm_strategist":
+            return _gtm(text)
+        case "financial_modeler":
+            return _assumptions(text)
+        case "editor":
+            return _editor(text)
     raise LookupError(f"offline responder has no rule for agent {request.agent!r}")

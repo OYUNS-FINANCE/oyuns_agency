@@ -47,3 +47,33 @@ class RunInput(BaseModel):
     def _seed_matches_mode(self) -> Self:
         check_seed_for_mode(self.mode, self.seed)
         return self
+
+
+ChannelType = Literal[
+    "paid_search",
+    "paid_social",
+    "content_seo",
+    "outbound_email",
+    "partnerships",
+    "marketplace_listing",
+    "community",
+    "referral_program",
+    "events",
+    "influencers",
+    "app_store",
+]
+"""Acquisition channels, one shared vocabulary so GTM and Finance refer to the same thing."""
+
+CHANNEL_LABELS: dict[ChannelType, str] = {
+    "paid_search": "Paid search",
+    "paid_social": "Paid social",
+    "content_seo": "Content & SEO",
+    "outbound_email": "Outbound email",
+    "partnerships": "Partnerships",
+    "marketplace_listing": "Marketplace listing",
+    "community": "Community",
+    "referral_program": "Referral program",
+    "events": "Events",
+    "influencers": "Influencers",
+    "app_store": "App store",
+}

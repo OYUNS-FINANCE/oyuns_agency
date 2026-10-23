@@ -11,7 +11,6 @@ from app.agents.common.brief import CheckpointPayload, ResumePayload
 from app.graph.builder import IncubatorGraph, compile_graph
 from app.graph.deps import GraphDeps
 from app.graph.state import Phase1State
-from app.graph.stubs import PHASE2_EDITOR, PHASE2_PARALLEL, STUB_STATUS
 from app.providers.llm.fake import FakeLLM
 from tests import factories as f
 
@@ -52,7 +51,7 @@ def _payload(result: dict[str, Any]) -> CheckpointPayload:
     return CheckpointPayload.model_validate(intr.value)
 
 
-async def test_runs_to_interrupt_with_ranked_briefs_then_resumes_to_phase2_stubs() -> None:
+async def test_runs_to_interrupt_with_ranked_briefs_then_resumes_into_phase2() -> None:
     d = f.deps(_script(GOOD, [8, 7, 9, 3]), agent_concurrency=1)
     graph = _graph()
     result = await graph.ainvoke(_initial(), CONFIG, context=d)
@@ -63,14 +62,17 @@ async def test_runs_to_interrupt_with_ranked_briefs_then_resumes_to_phase2_stubs
     assert payload.viable_count == 3 and payload.shortfall is None and payload.iterations == 1
     snapshot = await graph.aget_state(CONFIG)
     assert snapshot.next == ("checkpoint",)
-    assert not snapshot.values.get("phase2")
+    assert "plan" not in snapshot.values
 
     final = await graph.ainvoke(Command(resume=_select(payload, "opp-01")), CONFIG, context=d)
     assert final["selected_idea_id"] == "uuid-opp-01"
     assert final["selected_brief"] == payload.briefs[1]
-    assert final["phase2"] == dict.fromkeys((*PHASE2_PARALLEL, PHASE2_EDITOR), STUB_STATUS)
+    plan = final["plan"]
+    assert plan.idea_id == "uuid-opp-01" and plan.brief == payload.briefs[1]
+    assert plan.financials == final["financials"]
+    assert plan.contradictions == []  # the offline agents agree with each other
     assert (await graph.aget_state(CONFIG)).next == ()
-    assert len(final["usage"]) == 2 + 4 + 4
+    assert len(final["usage"]) == 2 + 4 + 4 + 4
 
 
 async def test_quality_loop_runs_exactly_once_then_reports_shortfall_honestly() -> None:
@@ -119,7 +121,7 @@ async def test_resume_accepts_an_edited_brief_that_is_not_in_the_snapshot() -> N
     resume = ResumePayload(idea_id="merged-or-edited", brief=edited).model_dump(mode="json")
     final = await graph.ainvoke(Command(resume=resume), CONFIG, context=d)
     assert final["selected_brief"].opportunity.title == "Edited during co-working"
-    assert final["phase2"] == dict.fromkeys((*PHASE2_PARALLEL, PHASE2_EDITOR), STUB_STATUS)
+    assert final["plan"].brief.opportunity.title == "Edited during co-working"
 
 
 @pytest.mark.parametrize(

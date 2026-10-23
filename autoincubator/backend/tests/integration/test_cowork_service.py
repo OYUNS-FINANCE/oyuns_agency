@@ -138,12 +138,9 @@ async def test_double_select_resumes_exactly_once(
     assert snapshot.next == ()
     assert snapshot.values["selected_idea_id"] == str(chosen)
     assert snapshot.values["selected_brief"].opportunity.title
-    assert set(snapshot.values["phase2"]) == {
-        "product_architect",
-        "gtm_strategist",
-        "financial_modeler",
-        "editor",
-    }
+    plan = snapshot.values["plan"]
+    assert plan.idea_id == str(chosen)
+    assert plan.brief == snapshot.values["selected_brief"]
 
 
 async def test_edited_idea_is_what_the_graph_resumes_with(
