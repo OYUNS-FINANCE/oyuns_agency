@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from app.core.config import Settings
+from app.events.sink import EventSink, NullEventSink
 from app.providers.dedup import Deduplicator
 from app.providers.llm.base import LLMProvider
 from app.providers.search.base import SearchProvider
@@ -16,3 +17,4 @@ class GraphDeps:
     search: SearchProvider
     dedup: Deduplicator
     settings: Settings
+    events: EventSink = field(default_factory=NullEventSink)

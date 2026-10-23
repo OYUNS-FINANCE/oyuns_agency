@@ -1,3 +1,4 @@
+import uuid
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -42,6 +43,9 @@ class Settings(BaseSettings):
         "postgresql+asyncpg://autoincubator:autoincubator@localhost:5432/autoincubator"
     )
     redis_url: str = "redis://localhost:6379/0"
+    arq_queue_name: str = "arq:queue"
+    default_user_id: uuid.UUID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+    """Owner of every row until auth exists (single-user mode)."""
 
     # Providers
     llm_provider: Literal["anthropic", "fake"] = "fake"
@@ -51,6 +55,8 @@ class Settings(BaseSettings):
     analyst_model: str = DEFAULT_MODEL
     skeptic_model: str = DEFAULT_MODEL
     llm_max_validation_retries: int = Field(default=2, ge=0)
+    fake_llm_latency_ms: int = Field(default=0, ge=0)
+    """Artificial delay per FakeLLM call: makes offline runs observable live (UI, kill tests)."""
 
     # Phase-1 graph
     quality_threshold: float = Field(default=6.0, ge=1, le=10)
@@ -61,6 +67,22 @@ class Settings(BaseSettings):
     dedup_threshold: float = Field(default=0.6, gt=0, le=1)
     agent_concurrency: int = Field(default=4, ge=1)
     rubric_weights: RubricWeights = Field(default_factory=RubricWeights)
+
+    # Runs: budget, worker leases, streaming
+    run_max_tokens: int = Field(default=2_000_000, ge=1)
+    """Per-run cap on LLM tokens (input + output + cache). A request may only lower it."""
+    run_max_searches: int = Field(default=300, ge=1)
+    """Per-run cap on search-provider calls (cache hits are free)."""
+    run_job_timeout_s: int = Field(default=3_600, ge=10)
+    run_lease_ttl_s: float = Field(default=60.0, gt=0)
+    """A run whose worker stops renewing its lease for this long is recovered by another."""
+    sse_poll_interval_s: float = Field(default=5.0, gt=0)
+    """Fallback DB poll for SSE streams, in case a NOTIFY is missed."""
+
+    @property
+    def asyncpg_dsn(self) -> str:
+        """Plain asyncpg DSN (no SQLAlchemy driver suffix), for LISTEN connections."""
+        return self.checkpoint_database_url
 
     @property
     def checkpoint_database_url(self) -> str:

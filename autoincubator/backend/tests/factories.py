@@ -12,6 +12,7 @@ from app.agents.common.schemas import RunInput
 from app.agents.scout.schemas import RawOpportunity, ScoutCandidate, ScoutQueryPlan
 from app.agents.skeptic.schemas import RUBRIC_DIMENSIONS, CritiqueOutput, CritiqueScorecard
 from app.core.config import Settings
+from app.events.sink import EventSink, NullEventSink
 from app.graph.deps import GraphDeps
 from app.providers.dedup import JaccardDeduplicator
 from app.providers.llm.fake import FakeLLM, Scripted
@@ -42,6 +43,7 @@ def deps(
     script: Mapping[str, Sequence[Scripted]] | None = None,
     *,
     search: MockSearchProvider | None = None,
+    events: EventSink | None = None,
     **setting_overrides: Any,
 ) -> GraphDeps:
     s = settings(**setting_overrides)
@@ -50,6 +52,7 @@ def deps(
         search=search or MockSearchProvider(),
         dedup=JaccardDeduplicator(s.dedup_threshold),
         settings=s,
+        events=events or NullEventSink(),
     )
 
 

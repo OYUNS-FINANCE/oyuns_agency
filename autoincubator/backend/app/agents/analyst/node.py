@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 
 import structlog
@@ -9,9 +10,15 @@ from langgraph.runtime import Runtime
 
 from app.agents.analyst import prompts
 from app.agents.analyst.schemas import MarketAnalysis, MarketAnalysisOutput
-from app.agents.common.context import gather_bounded, render_run_context
+from app.agents.common.context import (
+    elapsed_ms,
+    gather_bounded,
+    render_run_context,
+    search_and_report,
+)
 from app.agents.common.untrusted import wrap_untrusted
 from app.agents.scout.schemas import RawOpportunity
+from app.events.schema import AgentCompleted, AgentStarted, AgentThought
 from app.graph.deps import GraphDeps
 from app.graph.state import Phase1State
 from app.providers.llm.base import ChatMessage, LLMOutputError, LLMRequest, UsageRecord
@@ -51,7 +58,8 @@ async def _analyse(
     """Returns (None, usage) when the model cannot produce a valid analysis: the idea is
     then left unanalysed and is never ranked, rather than failing the whole run."""
     batches = [
-        await deps.search.search(q, max_results=RESULTS_PER_QUERY) for q in analyst_queries(opp)
+        await search_and_report(deps, AGENT, q, RESULTS_PER_QUERY, idea_key=opp.id)
+        for q in analyst_queries(opp)
     ]
     results: dict[str, SearchResult] = {}
     for batch in batches:
@@ -82,6 +90,10 @@ async def _analyse(
         result = await deps.llm.generate(request)
     except LLMOutputError as exc:
         log.warning("analyst.idea_failed", opportunity_id=opp.id, error=exc.last_error)
+        await deps.events.emit(
+            AgentThought(text=f"Could not produce a valid analysis for {opp.id}; skipping it."),
+            agent=AGENT,
+        )
         return None, exc.usage
     analysis = MarketAnalysis(**result.output.model_dump(), opportunity_id=opp.id)
     return analysis, result.usage
@@ -92,11 +104,25 @@ async def analyst_node(state: Phase1State, runtime: Runtime[GraphDeps]) -> Phase
     done = state.get("analyses", {})
     todo = [o for o in state.get("opportunities", []) if o.id not in done]
     run_context = render_run_context(state["run_input"])
+    started = time.monotonic()
+    await deps.events.emit(AgentStarted(node="analyst", items=len(todo)), agent=AGENT)
     outcomes = await gather_bounded(
         (_analyse(o, run_context, deps) for o in todo), deps.settings.agent_concurrency
     )
     analyses = {a.opportunity_id: a for a, _ in outcomes if a is not None}
     usage = [u for _, us in outcomes for u in us]
     estimates = sum(f.is_estimate for a in analyses.values() for f in a.figures())
+    await deps.events.emit(
+        AgentCompleted(
+            node="analyst",
+            duration_ms=elapsed_ms(started),
+            summary={
+                "analysed": len(analyses),
+                "failed": len(todo) - len(analyses),
+                "estimated_figures": estimates,
+            },
+        ),
+        agent=AGENT,
+    )
     log.info("analyst.done", analysed=len(analyses), estimated_figures=estimates)
     return {"analyses": analyses, "usage": usage}

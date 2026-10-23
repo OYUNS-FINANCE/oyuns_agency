@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from collections.abc import Awaitable, Iterable
 
 from app.agents.common.schemas import RunInput
+from app.events.schema import AgentToolCall
+from app.graph.deps import GraphDeps
+from app.providers.search.base import SearchResult
 
 
 def render_run_context(run_input: RunInput) -> str:
@@ -37,11 +41,37 @@ def render_run_context(run_input: RunInput) -> str:
 
 
 async def gather_bounded[T](aws: Iterable[Awaitable[T]], limit: int) -> list[T]:
-    """asyncio.gather with at most `limit` awaitables in flight; preserves order."""
+    """Runs awaitables with at most `limit` in flight; preserves order.
+
+    On the first failure the remaining ones are cancelled and that exception is re-raised
+    as-is (not as an ExceptionGroup), so callers can catch e.g. BudgetExhaustedError.
+    """
     sem = asyncio.Semaphore(limit)
 
     async def run(aw: Awaitable[T]) -> T:
         async with sem:
             return await aw
 
-    return list(await asyncio.gather(*(run(aw) for aw in aws)))
+    try:
+        async with asyncio.TaskGroup() as tg:
+            tasks = [tg.create_task(run(aw)) for aw in aws]
+    except BaseExceptionGroup as group:
+        raise group.exceptions[0] from None
+    return [t.result() for t in tasks]
+
+
+async def search_and_report(
+    deps: GraphDeps, agent: str, query: str, max_results: int, idea_key: str | None = None
+) -> list[SearchResult]:
+    """One search, announced as an `agent.tool_call` event."""
+    results = await deps.search.search(query, max_results=max_results)
+    await deps.events.emit(
+        AgentToolCall(tool="search", query=query, result_count=len(results), idea_key=idea_key),
+        agent=agent,
+    )
+    return results
+
+
+def elapsed_ms(started: float) -> int:
+    """Milliseconds since `started` (a time.monotonic() value)."""
+    return int((time.monotonic() - started) * 1000)

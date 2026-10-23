@@ -15,6 +15,7 @@ from anthropic.types.beta import (
 from pydantic import BaseModel
 
 from app.providers.llm.base import (
+    BeforeCallHook,
     ChatMessage,
     LLMRefusalError,
     LLMRequest,
@@ -39,8 +40,13 @@ class AnthropicLLM(StructuredLLMProvider):
         effort: Effort = "medium",
         max_validation_retries: int = 2,
         usage_hook: UsageHook | None = None,
+        before_call: BeforeCallHook | None = None,
     ):
-        super().__init__(max_validation_retries=max_validation_retries, usage_hook=usage_hook)
+        super().__init__(
+            max_validation_retries=max_validation_retries,
+            usage_hook=usage_hook,
+            before_call=before_call,
+        )
         self.client = client
         self.effort = effort
         self._schemas: dict[type[BaseModel], dict[str, Any]] = {}

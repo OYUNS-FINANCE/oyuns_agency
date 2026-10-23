@@ -8,10 +8,13 @@ from langgraph.runtime import Runtime
 from app.agents.common.brief import IdeaBrief
 from app.agents.skeptic.schemas import RUBRIC_DIMENSIONS, CritiqueScorecard
 from app.core.config import RubricWeights
+from app.events.schema import AgentCompleted, AgentThought
 from app.graph.deps import GraphDeps
 from app.graph.state import Phase1State
 
 log = structlog.get_logger(__name__)
+
+RANK_AGENT = "ranker"
 
 
 def composite_score(critique: CritiqueScorecard, weights: RubricWeights) -> float:
@@ -62,6 +65,25 @@ async def rank_node(state: Phase1State, runtime: Runtime[GraphDeps]) -> Phase1St
         else shortfall_message(
             len(viable), settings.min_viable_ideas, settings.quality_threshold, iteration
         )
+    )
+    events = runtime.context.events
+    if loop_back:
+        await events.emit(
+            AgentThought(
+                text=(
+                    f"Only {len(viable)} idea(s) reached the quality threshold; "
+                    "asking the Scout for one more pass."
+                )
+            ),
+            agent=RANK_AGENT,
+        )
+    await events.emit(
+        AgentCompleted(
+            node="rank",
+            duration_ms=0,
+            summary={"scored": len(scored), "viable": len(viable), "briefs": len(briefs)},
+        ),
+        agent=RANK_AGENT,
     )
     log.info(
         "rank.done",

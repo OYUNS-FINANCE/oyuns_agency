@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import time
 from collections import Counter
 from collections.abc import Callable
 
 import structlog
 from langgraph.runtime import Runtime
 
-from app.agents.common.context import gather_bounded, render_run_context
+from app.agents.common.context import (
+    elapsed_ms,
+    gather_bounded,
+    render_run_context,
+    search_and_report,
+)
 from app.agents.common.schemas import RunInput
 from app.agents.common.untrusted import wrap_untrusted
 from app.agents.scout import prompts
@@ -18,6 +24,7 @@ from app.agents.scout.schemas import (
     ScoutOutput,
     ScoutQueryPlan,
 )
+from app.events.schema import AgentCompleted, AgentStarted, AgentThought
 from app.graph.deps import GraphDeps
 from app.graph.state import Phase1State
 from app.providers.llm.base import ChatMessage, LLMRequest, UsageRecord
@@ -73,6 +80,8 @@ async def scout_node(state: Phase1State, runtime: Runtime[GraphDeps]) -> Phase1S
     settings = deps.settings
     run_input = state["run_input"]
     iteration = state.get("iteration", 0) + 1
+    started = time.monotonic()
+    await deps.events.emit(AgentStarted(node="scout", iteration=iteration), agent=AGENT)
     existing = state.get("opportunities", [])
     usage: list[UsageRecord] = []
     run_context = render_run_context(run_input)
@@ -93,9 +102,16 @@ async def scout_node(state: Phase1State, runtime: Runtime[GraphDeps]) -> Phase1S
     )
     usage += plan_result.usage
     queries = plan_result.output.queries
+    categories = len({q.category for q in queries})
+    await deps.events.emit(
+        AgentThought(
+            text=f"Planned {len(queries)} searches across {categories} signal categories."
+        ),
+        agent=AGENT,
+    )
 
     batches = await gather_bounded(
-        (deps.search.search(q.query, max_results=RESULTS_PER_QUERY) for q in queries),
+        (search_and_report(deps, AGENT, q.query, RESULTS_PER_QUERY) for q in queries),
         settings.agent_concurrency,
     )
     results: dict[str, SearchResult] = {}
@@ -134,6 +150,28 @@ async def scout_node(state: Phase1State, runtime: Runtime[GraphDeps]) -> Phase1S
         RawOpportunity(**c.model_dump(), id=f"opp-{offset + i + 1:02d}", iteration=iteration)
         for i, c in enumerate(unique)
     ]
+    await deps.events.emit(
+        AgentThought(
+            text=(
+                f"Proposed {len(candidates)} candidates; {len(filtered)} passed the quality "
+                f"filter and {len(new)} are new after deduplication."
+            )
+        ),
+        agent=AGENT,
+    )
+    await deps.events.emit(
+        AgentCompleted(
+            node="scout",
+            duration_ms=elapsed_ms(started),
+            summary={
+                "queries": len(queries),
+                "results": len(results),
+                "proposed": len(candidates),
+                "kept": len(new),
+            },
+        ),
+        agent=AGENT,
+    )
     log.info(
         "scout.done",
         iteration=iteration,

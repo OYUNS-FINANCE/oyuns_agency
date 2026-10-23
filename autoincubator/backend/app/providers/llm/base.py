@@ -32,7 +32,10 @@ class UsageRecord(BaseModel):
 
 
 UsageHook = Callable[[UsageRecord], Awaitable[None]]
-"""Called after every provider call, successful or not. Phase 6 plugs budgets in here."""
+"""Called after every provider call, successful or not (run_costs + budget accounting)."""
+BeforeCallHook = Callable[[str], Awaitable[None]]
+"""Called with the agent name before every provider call, retries included. Raising
+(e.g. BudgetExhaustedError) stops the call."""
 
 
 @dataclass(frozen=True)
@@ -84,9 +87,16 @@ class LLMProvider(Protocol):
 class StructuredLLMProvider(abc.ABC):
     """Shared retry loop: complete → validate → on failure, feed the error back and retry."""
 
-    def __init__(self, *, max_validation_retries: int = 2, usage_hook: UsageHook | None = None):
+    def __init__(
+        self,
+        *,
+        max_validation_retries: int = 2,
+        usage_hook: UsageHook | None = None,
+        before_call: BeforeCallHook | None = None,
+    ):
         self.max_validation_retries = max_validation_retries
         self.usage_hook = usage_hook
+        self.before_call = before_call
 
     @abc.abstractmethod
     async def _complete(
@@ -99,6 +109,8 @@ class StructuredLLMProvider(abc.ABC):
         last_error = ""
         attempts = self.max_validation_retries + 1
         for attempt in range(1, attempts + 1):
+            if self.before_call is not None:
+                await self.before_call(request.agent)
             raw = await self._complete(request, messages, attempt)  # type: ignore[arg-type]
             usage.append(raw.usage)
             if self.usage_hook is not None:

@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import time
+
 import structlog
 from langgraph.runtime import Runtime
 
 from app.agents.analyst.schemas import MarketAnalysis
-from app.agents.common.context import gather_bounded, render_run_context
+from app.agents.common.context import elapsed_ms, gather_bounded, render_run_context
 from app.agents.scout.schemas import RawOpportunity
 from app.agents.skeptic import prompts
 from app.agents.skeptic.schemas import CritiqueOutput, CritiqueScorecard
+from app.events.schema import AgentCompleted, AgentStarted, AgentThought
 from app.graph.deps import GraphDeps
 from app.graph.state import Phase1State
 from app.providers.llm.base import ChatMessage, LLMOutputError, LLMRequest, UsageRecord
@@ -44,6 +47,10 @@ async def _critique(
         result = await deps.llm.generate(request)
     except LLMOutputError as exc:
         log.warning("skeptic.idea_failed", opportunity_id=opp.id, error=exc.last_error)
+        await deps.events.emit(
+            AgentThought(text=f"Could not produce a valid scorecard for {opp.id}; skipping it."),
+            agent=AGENT,
+        )
         return None, exc.usage
     return CritiqueScorecard(**result.output.model_dump(), opportunity_id=opp.id), result.usage
 
@@ -54,11 +61,21 @@ async def skeptic_node(state: Phase1State, runtime: Runtime[GraphDeps]) -> Phase
     done = state.get("critiques", {})
     todo = [o for o in state.get("opportunities", []) if o.id in analyses and o.id not in done]
     run_context = render_run_context(state["run_input"])
+    started = time.monotonic()
+    await deps.events.emit(AgentStarted(node="skeptic", items=len(todo)), agent=AGENT)
     outcomes = await gather_bounded(
         (_critique(o, analyses[o.id], run_context, deps) for o in todo),
         deps.settings.agent_concurrency,
     )
     critiques = {c.opportunity_id: c for c, _ in outcomes if c is not None}
     usage = [u for _, us in outcomes for u in us]
+    await deps.events.emit(
+        AgentCompleted(
+            node="skeptic",
+            duration_ms=elapsed_ms(started),
+            summary={"critiqued": len(critiques), "failed": len(todo) - len(critiques)},
+        ),
+        agent=AGENT,
+    )
     log.info("skeptic.done", critiqued=len(critiques))
     return {"critiques": critiques, "usage": usage}

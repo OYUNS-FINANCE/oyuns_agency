@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import re
@@ -13,6 +14,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from app.providers.llm.base import (
+    BeforeCallHook,
     ChatMessage,
     LLMRequest,
     RawCompletion,
@@ -57,8 +59,15 @@ class FakeLLM(StructuredLLMProvider):
         responder: Responder | None = None,
         max_validation_retries: int = 2,
         usage_hook: UsageHook | None = None,
+        before_call: BeforeCallHook | None = None,
+        latency_s: float = 0.0,
     ):
-        super().__init__(max_validation_retries=max_validation_retries, usage_hook=usage_hook)
+        super().__init__(
+            max_validation_retries=max_validation_retries,
+            usage_hook=usage_hook,
+            before_call=before_call,
+        )
+        self.latency_s = latency_s
         self._queues: dict[str, deque[Scripted]] = defaultdict(deque)
         for agent, items in (script or {}).items():
             self._queues[agent].extend(items)
@@ -71,6 +80,8 @@ class FakeLLM(StructuredLLMProvider):
     async def _complete(
         self, request: LLMRequest[BaseModel], messages: Sequence[ChatMessage], attempt: int
     ) -> RawCompletion:
+        if self.latency_s:
+            await asyncio.sleep(self.latency_s)
         self.calls.append(
             FakeCall(request.agent, request.model, request.system, tuple(messages), attempt)
         )
