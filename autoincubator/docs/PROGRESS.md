@@ -3,17 +3,133 @@
 Claude updates this file at the end of every phase. Newest entries go on top.
 
 ## Current phase
-Phase 1 — done except the real-Anthropic-key CLI check (see Phase 1 entry); Phase 2 next
+Phase 2 — done; Phase 3 (frontend: start screen & live discovery) next.
+Still open from Phase 1: the real-Anthropic-key CLI check.
 
 ## Phase checklist
 - [x] 0 — Skeleton & infrastructure
 - [x] 1 — Phase-1 graph core (offline) — real-key CLI run pending
-- [ ] 2 — Runs, persistence, worker & streaming
+- [x] 2 — Runs, persistence, worker & streaming
 - [ ] 3 — Frontend: start screen & live discovery
 - [ ] 4 — Co-working checkpoint (HITL)
 - [ ] 5 — Phase-2 agents, finance engine & export
 - [ ] 6 — Real search, evals, cost & observability
 - [ ] 7 — Deployment
+
+---
+
+### Phase 2 — Runs, persistence, worker & streaming (2026-10-23)
+**Built:**
+- **Tables** (migration `0002`, round-trips up/down): `runs` (status enum, `input` JSONB
+  snapshot, `error` JSONB, budget caps + counters, lease columns), `ideas` (unique
+  `(run_id, key)`), `idea_versions` (unique `(idea_id, version)`, opportunity/analysis/
+  critique JSONB), `agent_events` (bigserial, `(run_id, id)` index, `type` varchar),
+  `search_cache` (unique per run + normalised query + max_results), `run_costs` (one row per
+  LLM attempt), `founder_profile` (one row per user). Every table has `user_id`, filled from
+  `DEFAULT_USER_ID` until auth. Repositories in `app/db/repositories/`. The unique-constraint
+  naming convention now includes every column.
+- **Events:**
+  - typed `Event` union (13 types, SPEC §6) in `app/events/schema.py`
+  - `EventSink` protocol in `GraphDeps` (null and recording sinks for the CLI and tests)
+  - `PostgresEventSink`
+  - `insert_event`: per-run advisory lock, then insert, then `pg_notify`
+  - `EventBroker`: one LISTEN connection per API process, wake-ups only
+  
+  Scout, Analyst, Skeptic and rank emit `agent.started/thought/tool_call/completed`.
+- **Worker** (`app/worker/runs.py`): `start_run` takes a per-job lease, runs the graph
+  with `durability="sync"`, and at the interrupt writes ideas + version 1, `idea.created`,
+  `run.interrupted` and `awaiting_human` in one transaction. The lease is renewed in the
+  background. The `recover_runs` cron (at startup and every 15 s) re-enqueues runs with an
+  expired lease or a lost job; they resume from the checkpoint. Status machine in
+  `services/runs.py`.
+- **Budget** (`services/budget.py`): checked before every LLM attempt (new `before_call`
+  hook in the retry loop) and every search-provider call. `budget.warning` at 80%; at 100%
+  the run stops with `budget.exhausted`, `run.error` and status `budget_exhausted`.
+  `gather_bounded` now cancels siblings on the first error (`TaskGroup`).
+- **Search cache:** `CachedSearchProvider` takes a `SearchCache` (in-memory for the CLI,
+  `PostgresSearchCache` in the worker) plus budget hooks. Only cache misses are counted.
+- **API** under `/api/incubator`:
+  - `POST /runs` → 202 `{run_id, status}`
+  - `GET /runs?limit&offset`
+  - `GET /runs/{id}` (run, budget usage, cost, ideas at their latest version)
+  - `GET /runs/{id}/stream` (SSE: `Last-Event-ID` header or `?last_event_id=`, `retry`,
+    keep-alive pings, closes on terminal statuses)
+  - `GET/PUT /profile`
+  
+  One error shape, `{"error": {code, message, details}}`, covers app errors, 404/405, 422
+  and 500.
+- **OpenAPI:** `backend/openapi.json` is committed. It includes the SSE `Event` union under
+  `components/schemas/Event`, referenced by the stream's `data` field.
+  `scripts/export_openapi.py` (`make openapi`) regenerates it, and a unit test fails when
+  the file is stale.
+- `FAKE_LLM_LATENCY_MS` makes offline runs slow enough to watch live (and to kill a worker
+  mid-run in tests).
+- **Tests:**
+  - 32 new unit tests: event union round-trip, budget thresholds/retries/shielding, status
+    machine, node events, error model, OpenAPI drift, `gather_bounded` cancellation.
+  - 10 new integration tests: real uvicorn + arq subprocesses on a private queue for the
+    SSE, reconnect, kill and budget tests; DB-level tests for the state machine, leases and
+    the two-jobs race.
+
+**Deviations from spec (and why):**
+- Routes are under `/api/incubator/...` (the SPEC §6 table), not bare `/runs` as written
+  in the phase file. The profile route is `/api/incubator/profile`.
+- `cowork_messages` and `business_plans` are not created yet (Phases 4 and 5).
+- `budget_exhausted` is its own terminal status rather than `failed` + code (ADR 0004).
+- Only ranked briefs (3–5) are persisted as ideas. Scored ideas below the threshold stay in
+  the checkpoint only.
+- `agent.thought` carries progress notes written by the nodes, not model reasoning.
+- `agent.tool_call` has no `cached` flag: the node can't see whether the search cache
+  answered.
+
+**ADRs added:** 0003 — SSE via LISTEN/NOTIFY with per-run ordered ids. 0004 — run
+execution: status machine, job leases, crash recovery (resume from checkpoint), budgets.
+
+**Known issues / tech debt:**
+- **Bugs found and fixed while verifying:**
+  - Leases were first owned per worker process, so one worker could drive a run twice
+    (arq retry + recovery job) and mark a finished run `failed`. They are now owned per job,
+    and final writes require the lease. A regression test covers it.
+  - `budget.exhausted` could be lost when a sibling task cancelled the emitting task. The
+    worker now writes it, and usage accounting is shielded from cancellation.
+- Steps re-run after a crash re-emit their `agent.*` events, with new ids.
+- **Budget overshoot:** parallel calls can pass the cap by up to `AGENT_CONCURRENCY` calls.
+  The cost of an LLM call isn't known before it is made.
+- **LISTEN needs a direct Postgres connection.** It won't work through a
+  transaction-pooling PgBouncer; note this for Phase 7.
+- arq still re-delivers a killed job after `RUN_JOB_TIMEOUT_S + 10 s`. The lease turns
+  that delivery into a `skipped` no-op.
+- **Leftover row in the dev DB:** run `b2c746ef-…` (status `failed`), produced by the
+  lease bug above before it was fixed. Harmless; delete it if you like.
+- **Single-user mode:** `get_current_user_id` returns `DEFAULT_USER_ID`. The API scopes
+  reads by user; worker-side reads do not.
+- Integration tests leave their completed runs in the dev database (no active ones).
+
+**Acceptance criteria:** all passed (verified by running commands):
+- `POST /runs` under 200 ms: `test_start_run_streams_events_in_order_and_reaches_awaiting_human`
+  times 5 POSTs (well under 200 ms; a manual `curl` measured 52 ms). The work runs in the
+  worker.
+- Start a run → ordered SSE events → `awaiting_human` → ideas via `GET /runs/{id}`: same test.
+- Disconnect, reconnect with `Last-Event-ID`, nothing lost or duplicated:
+  `test_reconnect_with_last_event_id_loses_and_duplicates_nothing`. It disconnects mid-run
+  and compares against a full replay.
+- SIGKILL the worker mid-Analyst, start a new one: the run resumes from the checkpoint
+  (Scout not re-run) and reaches `awaiting_human`
+  (`test_killed_worker_is_recovered_and_resumes_from_the_checkpoint`; ADR 0004).
+- Budget exhaustion: `test_budget_exhaustion_stops_the_run_with_a_clear_status` checks
+  warning → exhausted → `run.error` → status `budget_exhausted`, the stream closing, and
+  `GET` showing the error.
+- `backend/openapi.json` is generated and committed, with a drift test.
+- `pytest` (93 passed), `pytest -m integration` (12 passed, repeated 3+ times without
+  failures after the fixes), `mypy --strict` (app, scripts, tests, migrations), `ruff check`,
+  `ruff format --check`, `alembic check`, the Phase-1 CLI, the ping smoke check, and
+  `pnpm typecheck/lint/test` all pass.
+- ADR 0001 follow-up: SSE through the Next rewrite (`pnpm dev` on :3000) streams
+  incrementally and forwards `Last-Event-ID`.
+
+**Next:** Phase 3 — frontend start screen & live discovery
+(`docs/phases/03-frontend-discovery.md`). Types for events can be generated from
+`openapi.json`.
 
 ---
 

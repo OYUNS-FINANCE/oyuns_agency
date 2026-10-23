@@ -67,10 +67,13 @@ cd backend && uv run arq app.worker.main.WorkerSettings
 cd backend && PYTHONPATH=. uv run python scripts/enqueue_ping.py  # worker smoke check
 cd backend && PYTHONPATH=. uv run python scripts/run_phase1.py --seed "..."   # or --auto; JSON on stdout
 cd backend && PYTHONPATH=. uv run python scripts/run_phase1.py --thread-id ID --resume-select opp-01
+cd backend && PYTHONPATH=. uv run python scripts/export_openapi.py  # regenerate openapi.json
+curl -XPOST localhost:8000/api/incubator/runs -H 'content-type: application/json' -d '{"mode":"seeded","seed":"..."}'
+curl -N localhost:8000/api/incubator/runs/RUN_ID/stream            # SSE; needs api + worker
 cd backend && uv run pytest && uv run mypy app scripts tests migrations && uv run ruff check .
 cd backend && uv run pytest -m integration                        # needs compose up
 cd frontend && pnpm dev                                           # web on :3000, proxies /api
 cd frontend && pnpm typecheck && pnpm lint && pnpm test
 ```
-`make up | migrate | api | worker | ping | phase1 ARGS="--auto" | web | check | test-integration` wrap the same commands.
+`make up | migrate | api | worker | ping | phase1 ARGS="--auto" | openapi | web | check | test-integration` wrap the same commands.
 Keep this list accurate as it changes.

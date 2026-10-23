@@ -1,4 +1,4 @@
-.PHONY: up down migrate api worker ping phase1 web check check-backend check-frontend test-integration install
+.PHONY: up down migrate api worker ping phase1 openapi web check check-backend check-frontend test-integration install
 
 install:
 	cd backend && uv sync
@@ -24,6 +24,9 @@ ping:
 
 phase1:
 	cd backend && PYTHONPATH=. uv run python scripts/run_phase1.py $(ARGS)
+
+openapi:
+	cd backend && PYTHONPATH=. uv run python scripts/export_openapi.py
 
 web:
 	cd frontend && pnpm dev
