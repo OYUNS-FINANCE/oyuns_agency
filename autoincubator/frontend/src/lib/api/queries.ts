@@ -20,6 +20,7 @@ export const queryKeys = {
   ideas: (runId: string) => ["runs", "ideas", runId] as const,
   idea: (runId: string, ideaId: string) => ["runs", "ideas", runId, ideaId] as const,
   messages: (runId: string, ideaId: string) => ["runs", "ideas", runId, ideaId, "cowork"] as const,
+  plan: (runId: string) => ["runs", "plan", runId] as const,
   profile: ["profile"] as const,
 };
 
@@ -60,6 +61,17 @@ export function useRunEvents(runId: string): RunEventStore {
     gcTime: 30 * 60_000,
   });
   return data ?? EMPTY_EVENT_STORE;
+}
+
+/** The run's business plan; only fetched once the run has completed (404 before). */
+export function usePlan(runId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.plan(runId),
+    queryFn: ({ signal }) => api.getPlan(runId, signal),
+    enabled,
+    retry: retryTransient,
+    staleTime: Infinity,
+  });
 }
 
 export function useRunList(limit: number, offset: number) {

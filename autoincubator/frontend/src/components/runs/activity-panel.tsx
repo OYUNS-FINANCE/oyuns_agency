@@ -16,6 +16,10 @@ const AGENT_DOT: Record<string, string> = {
   analyst: "bg-agent-analyst",
   skeptic: "bg-agent-skeptic",
   ranker: "bg-agent-ranker",
+  product_architect: "bg-agent-architect",
+  gtm_strategist: "bg-agent-gtm",
+  financial_modeler: "bg-agent-finance",
+  editor: "bg-agent-editor",
 };
 
 function humanize(key: string): string {

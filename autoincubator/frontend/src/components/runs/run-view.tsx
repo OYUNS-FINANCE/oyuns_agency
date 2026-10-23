@@ -4,6 +4,7 @@ import {
   CircleAlert,
   CircleCheck,
   CirclePause,
+  FileText,
   GitMerge,
   Lightbulb,
   Loader2,
@@ -22,7 +23,7 @@ import { EmptyState, ErrorState } from "@/components/common/states";
 import { CoworkDrawer } from "@/components/cowork/cowork-drawer";
 import { MergeDialog } from "@/components/cowork/dialogs";
 import { IdeaCard, IdeaCardPending, IdeaCardSkeleton } from "@/components/ideas/idea-card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/client";
 import { useMerge, useRun, useRunEvents } from "@/lib/api/queries";
@@ -227,8 +228,12 @@ function RunBanners({
         tone="info"
         title={`Run complete — “${selected.title}”`}
       >
-        Phase 2 ran with placeholder steps: the business-plan agents are not built yet, so there is
-        no dossier to show.
+        The business plan is ready: product, go-to-market, financials and a 30/60/90-day plan.
+        <div className="mt-2">
+          <Link href={`/runs/${run.id}/plan`} className={buttonVariants({ size: "sm" })}>
+            <FileText className="size-4" aria-hidden /> View business plan
+          </Link>
+        </div>
       </Banner>,
     );
   }

@@ -54,4 +54,8 @@ export const AGENT_LABEL: Record<string, string> = {
   skeptic: "Devil's Advocate",
   ranker: "Ranker",
   run: "Run",
+  product_architect: "Product Architect",
+  gtm_strategist: "GTM Strategist",
+  financial_modeler: "Financial Modeler",
+  editor: "Editor",
 };

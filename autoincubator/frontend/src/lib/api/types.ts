@@ -43,6 +43,20 @@ export type ProfileResponse = Schemas["ProfileResponse"];
 
 export type ErrorBody = Schemas["ErrorBody"];
 
+// Business plan (Phase 2, ADR 0007).
+export type PlanResponse = Schemas["PlanResponse"];
+export type BusinessPlan = Schemas["BusinessPlan"];
+export type EngineFormula = Schemas["EngineFormula"];
+export type Contradiction = Schemas["Contradiction"];
+export type PlanSection = Contradiction["sections"][number];
+export type ScenarioResult = Schemas["ScenarioResult"];
+export type ScenarioName = ScenarioResult["scenario"];
+export type MonthRow = Schemas["MonthRow"];
+export type UnitEconomics = Schemas["UnitEconomics"];
+export type ChannelType = Schemas["GtmChannel"]["channel"];
+export type PlanFigure = Schemas["SourcedFigure"];
+export type ExportFormat = "md" | "pdf";
+
 /** One SSE event envelope, discriminated on `type`. */
 export type RunEvent = Schemas["Event"];
 export type RunEventType = RunEvent["type"];

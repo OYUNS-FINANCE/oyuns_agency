@@ -213,6 +213,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/incubator/runs/{run_id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Plan
+         * @description The latest plan version. 404 `plan_not_found` until the run has completed.
+         */
+        get: operations["get_plan_api_incubator_runs__run_id__plan_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/incubator/runs/{run_id}/plan/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Plan */
+        get: operations["export_plan_api_incubator_runs__run_id__plan_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/incubator/runs/{run_id}/select": {
         parameters: {
             query?: never;
@@ -438,6 +475,42 @@ export interface components {
              */
             message_id: string;
         };
+        /**
+         * AssumptionSet
+         * @description What the Financial Modeler returns. No derived numbers: the engine computes those.
+         */
+        AssumptionSet: {
+            /**
+             * Channels
+             * @description Paid acquisition channels. Empty = no paid acquisition.
+             */
+            channels: components["schemas"]["ChannelAssumption"][];
+            /** Fixed Costs */
+            fixed_costs: components["schemas"]["FixedCost"][];
+            /** @description Share of signups that become paying, 0 to 1. */
+            free_to_paid: components["schemas"]["SourcedFigure"];
+            /**
+             * Launch Month
+             * @description First month with customers (1 = immediately).
+             */
+            launch_month: number;
+            /** Launch Rationale */
+            launch_rationale: string;
+            /** @description Share of paying customers lost per month. */
+            monthly_churn: components["schemas"]["SourcedFigure"];
+            /** @description Monthly growth of free signups, 0 to 1. */
+            organic_growth: components["schemas"]["SourcedFigure"];
+            /** @description Free signups in the launch month. */
+            organic_signups_m1: components["schemas"]["SourcedFigure"];
+            /** @description Payment processing share of revenue. */
+            payment_fee_pct: components["schemas"]["SourcedFigure"];
+            /** Price Tiers */
+            price_tiers: components["schemas"]["PriceTier"][];
+            /** @description USD available at month 0. */
+            starting_cash: components["schemas"]["SourcedFigure"];
+            /** @description USD per paying customer per month (hosting, support). */
+            variable_cost_per_customer: components["schemas"]["SourcedFigure"];
+        };
         /** BudgetExhausted */
         BudgetExhausted: {
             /**
@@ -537,6 +610,53 @@ export interface components {
              */
             type: "budget.warning";
         };
+        /** BusinessPlan */
+        BusinessPlan: {
+            assumptions: components["schemas"]["AssumptionSet"];
+            brief: components["schemas"]["IdeaBrief"];
+            checklist: components["schemas"]["LaunchChecklist"];
+            /** Contradictions */
+            contradictions: components["schemas"]["Contradiction"][];
+            /** Executive Summary */
+            executive_summary: string;
+            financials: components["schemas"]["FinancialModel"];
+            gtm: components["schemas"]["GtmPlan"];
+            /**
+             * Idea Id
+             * @description Application id (`ideas.id`) of the developed idea.
+             */
+            idea_id: string;
+            product: components["schemas"]["ProductPlan"];
+            /** Risks */
+            risks: components["schemas"]["Risk"][];
+        };
+        /** ChannelAssumption */
+        ChannelAssumption: {
+            /** @description USD spent per new paying customer; must be > 0. */
+            cac: components["schemas"]["SourcedFigure"];
+            /**
+             * Channel
+             * @description Matched against the GTM Strategist's channels.
+             * @enum {string}
+             */
+            channel: "paid_search" | "paid_social" | "content_seo" | "outbound_email" | "partnerships" | "marketplace_listing" | "community" | "referral_program" | "events" | "influencers" | "app_store";
+            /** @description USD per month from launch onwards. */
+            monthly_spend: components["schemas"]["SourcedFigure"];
+        };
+        /** ChannelEconomics */
+        ChannelEconomics: {
+            /** Cac */
+            cac: number;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "paid_search" | "paid_social" | "content_seo" | "outbound_email" | "partnerships" | "marketplace_listing" | "community" | "referral_program" | "events" | "influencers" | "app_store";
+            /** Monthly Spend */
+            monthly_spend: number;
+            /** New Customers Per Month */
+            new_customers_per_month: number;
+        };
         /** Competitor */
         Competitor: {
             /** Name */
@@ -546,6 +666,56 @@ export interface components {
             price?: components["schemas"]["SourcedFigure"] | null;
             /** Url */
             url?: string | null;
+        };
+        /** Component */
+        Component: {
+            /** Name */
+            name: string;
+            /** Responsibility */
+            responsibility: string;
+        };
+        /**
+         * ComputedFigure
+         * @description A number a consistency check derived; listed with its formula in the appendix.
+         */
+        ComputedFigure: {
+            /** Formula */
+            formula: string;
+            /** Label */
+            label: string;
+            /** Value */
+            value: number;
+        };
+        /** Contradiction */
+        Contradiction: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "channel_cac_mismatch" | "channel_missing_in_finance" | "channel_missing_in_gtm" | "mvp_estimate_mismatch" | "launch_before_build" | "untraced_number" | "editor_review";
+            /** Description */
+            description: string;
+            /** Figures */
+            figures?: components["schemas"]["ComputedFigure"][];
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "check" | "editor";
+            /** Resolution */
+            resolution?: string | null;
+            /** Sections */
+            sections: ("opportunity" | "product" | "gtm" | "financials" | "launch")[];
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "low" | "medium" | "high";
+            /**
+             * Untraced
+             * @description For untraced_number: the numbers as written.
+             */
+            untraced?: string[];
         };
         /**
          * CoworkDelta
@@ -675,6 +845,29 @@ export interface components {
             name: string;
             size?: components["schemas"]["SourcedFigure"] | null;
         };
+        /** EngineFormula */
+        EngineFormula: {
+            /** Formula */
+            formula: string;
+            /**
+             * Inputs
+             * @description Assumption groups this output depends on.
+             */
+            inputs: string[];
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+        };
+        /** Entity */
+        Entity: {
+            /** Fields */
+            fields: string[];
+            /** Name */
+            name: string;
+            /** Notes */
+            notes?: string | null;
+        };
         /** ErrorBody */
         ErrorBody: {
             /** Code */
@@ -689,6 +882,38 @@ export interface components {
             error: components["schemas"]["ErrorBody"];
         };
         Event: components["schemas"]["RunStatusEvent"] | components["schemas"]["RunInterruptedEvent"] | components["schemas"]["RunResumedEvent"] | components["schemas"]["RunCompletedEvent"] | components["schemas"]["RunErrorEvent"] | components["schemas"]["AgentStartedEvent"] | components["schemas"]["AgentThoughtEvent"] | components["schemas"]["AgentToolCallEvent"] | components["schemas"]["AgentCompletedEvent"] | components["schemas"]["IdeaCreatedEvent"] | components["schemas"]["IdeaUpdatedEvent"] | components["schemas"]["BudgetWarningEvent"] | components["schemas"]["BudgetExhaustedEvent"];
+        /** Feature */
+        Feature: {
+            /** Description */
+            description: string;
+            /**
+             * Estimate Days
+             * @description Full-time working days for one developer.
+             */
+            estimate_days: number;
+            /** Name */
+            name: string;
+            /**
+             * Scope
+             * @description "now" = in the MVP.
+             * @enum {string}
+             */
+            scope: "now" | "later";
+        };
+        /** FinancialModel */
+        FinancialModel: {
+            /** Scenarios */
+            scenarios: {
+                [key: string]: components["schemas"]["ScenarioResult"];
+            };
+        };
+        /** FixedCost */
+        FixedCost: {
+            /** @description USD per month, from month 1. */
+            monthly: components["schemas"]["SourcedFigure"];
+            /** Name */
+            name: string;
+        };
         /** FounderProfile */
         FounderProfile: {
             /** Capital Usd */
@@ -711,6 +936,35 @@ export interface components {
             /** Weekly Hours */
             weekly_hours?: number | null;
         };
+        /** GtmChannel */
+        GtmChannel: {
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "paid_search" | "paid_social" | "content_seo" | "outbound_email" | "partnerships" | "marketplace_listing" | "community" | "referral_program" | "events" | "influencers" | "app_store";
+            /** @description USD per new paying customer. */
+            expected_cac: components["schemas"]["SourcedFigure"];
+            /** Rationale */
+            rationale: string;
+        };
+        /** GtmPlan */
+        GtmPlan: {
+            /**
+             * Channels
+             * @description Paid channels, cheapest expected CAC first.
+             */
+            channels: components["schemas"]["GtmChannel"][];
+            /** First 100 Customers */
+            first_100_customers: components["schemas"]["LaunchStep"][];
+            icp: components["schemas"]["IdealCustomerProfile"];
+            /** Positioning */
+            positioning: string;
+            /** Viral Loops */
+            viral_loops: components["schemas"]["Tactic"][];
+            /** Zero Budget Tactics */
+            zero_budget_tactics: components["schemas"]["Tactic"][];
+        };
         /** HealthResponse */
         HealthResponse: {
             /**
@@ -723,6 +977,16 @@ export interface components {
              * @enum {string}
              */
             redis: "ok" | "error";
+        };
+        /** IdeaBrief */
+        IdeaBrief: {
+            analysis: components["schemas"]["MarketAnalysis"];
+            /** Composite Score */
+            composite_score: number;
+            critique: components["schemas"]["CritiqueScorecard"];
+            opportunity: components["schemas"]["RawOpportunity"];
+            /** Rank */
+            rank: number;
         };
         /** IdeaCreated */
         IdeaCreated: {
@@ -884,6 +1148,20 @@ export interface components {
             version: number;
             version_source: components["schemas"]["IdeaVersionSource"];
         };
+        /** IdealCustomerProfile */
+        IdealCustomerProfile: {
+            /**
+             * Attributes
+             * @description Who exactly.
+             */
+            attributes: string[];
+            /** Buying Trigger */
+            buying_trigger: string;
+            /** Description */
+            description: string;
+            /** Pains */
+            pains: string[];
+        };
         /**
          * JobAccepted
          * @description Work queued in the worker; progress and the result arrive on the run's stream.
@@ -891,6 +1169,22 @@ export interface components {
         JobAccepted: {
             /** Job Id */
             job_id: string;
+        };
+        /** LaunchChecklist */
+        LaunchChecklist: {
+            /** Day 30 */
+            day_30: string[];
+            /** Day 60 */
+            day_60: string[];
+            /** Day 90 */
+            day_90: string[];
+        };
+        /** LaunchStep */
+        LaunchStep: {
+            /** Description */
+            description: string;
+            /** Step */
+            step: string;
         };
         /** MarketAnalysis */
         MarketAnalysis: {
@@ -924,6 +1218,29 @@ export interface components {
             /** Idea Ids */
             idea_ids: string[];
         };
+        /** MonthRow */
+        MonthRow: {
+            /** Cash */
+            cash: number;
+            /** Cogs */
+            cogs: number;
+            /** Customers */
+            customers: number;
+            /** Gross Profit */
+            gross_profit: number;
+            /** Month */
+            month: number;
+            /** Mrr */
+            mrr: number;
+            /** Net Cash Flow */
+            net_cash_flow: number;
+            /** New Customers */
+            new_customers: number;
+            /** Opex */
+            opex: number;
+            /** Signups */
+            signups: number;
+        };
         /** PatchOperation */
         PatchOperation: {
             /**
@@ -939,6 +1256,33 @@ export interface components {
              */
             value: unknown;
         };
+        /** PlanResponse */
+        PlanResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Engine Formulas */
+            engine_formulas: components["schemas"]["EngineFormula"][];
+            plan: components["schemas"]["BusinessPlan"];
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Version */
+            version: number;
+        };
+        /** PriceTier */
+        PriceTier: {
+            /** @description Share of paying customers on this tier, 0 to 1. */
+            mix: components["schemas"]["SourcedFigure"];
+            /** Name */
+            name: string;
+            /** @description USD per customer per month. */
+            price_monthly: components["schemas"]["SourcedFigure"];
+        };
         /** PricingBenchmark */
         PricingBenchmark: {
             /**
@@ -949,6 +1293,31 @@ export interface components {
             price: components["schemas"]["SourcedFigure"];
             /** Product */
             product: string;
+        };
+        /** ProductPlan */
+        ProductPlan: {
+            /** Architecture */
+            architecture: string;
+            /**
+             * Build Estimate Basis
+             * @description How the estimate was derived.
+             */
+            build_estimate_basis: string;
+            /**
+             * Build Estimate Weeks
+             * @description Full-time (40 h) weeks for one developer to ship the MVP.
+             */
+            build_estimate_weeks: number;
+            /** Components */
+            components: components["schemas"]["Component"][];
+            /** Data Model */
+            data_model: components["schemas"]["Entity"][];
+            /** Features */
+            features: components["schemas"]["Feature"][];
+            /** Mvp Summary */
+            mvp_summary: string;
+            /** Stack */
+            stack: components["schemas"]["StackChoice"][];
         };
         /** ProfileResponse */
         ProfileResponse: {
@@ -1003,6 +1372,13 @@ export interface components {
             /** Reason */
             reason?: string | null;
         };
+        /** Risk */
+        Risk: {
+            /** Mitigation */
+            mitigation: string;
+            /** Risk */
+            risk: string;
+        };
         /**
          * RubricScore
          * @description 1-10 where 10 is always the favourable end (lowest risk / best outlook).
@@ -1022,7 +1398,14 @@ export interface components {
             score: number;
         };
         /** RunCompleted */
-        RunCompleted: Record<string, never>;
+        RunCompleted: {
+            /**
+             * Plan Version
+             * @description The business plan version written with the completion.
+             * @default null
+             */
+            plan_version: number | null;
+        };
         /** RunCompletedEvent */
         RunCompletedEvent: {
             /**
@@ -1320,6 +1703,40 @@ export interface components {
             /** Viable Count */
             viable_count: number | null;
         };
+        /**
+         * ScenarioMultipliers
+         * @description Applied to the base assumptions. Fractions are capped at 1 afterwards.
+         */
+        ScenarioMultipliers: {
+            /** Cac */
+            cac: number;
+            /** Free To Paid */
+            free_to_paid: number;
+            /** Monthly Churn */
+            monthly_churn: number;
+            /** Organic Growth */
+            organic_growth: number;
+        };
+        /** ScenarioResult */
+        ScenarioResult: {
+            /** Break Even Month */
+            break_even_month: number | null;
+            /** Cash Out Month */
+            cash_out_month: number | null;
+            /** Channels */
+            channels: components["schemas"]["ChannelEconomics"][];
+            /** Months */
+            months: components["schemas"]["MonthRow"][];
+            multipliers: components["schemas"]["ScenarioMultipliers"];
+            /** Runway After M12 */
+            runway_after_m12: number | null;
+            /**
+             * Scenario
+             * @enum {string}
+             */
+            scenario: "base" | "bear" | "bull";
+            unit_economics: components["schemas"]["UnitEconomics"];
+        };
         /** SelectRequest */
         SelectRequest: {
             /**
@@ -1376,6 +1793,42 @@ export interface components {
             unit: string;
             /** Value */
             value: number;
+        };
+        /** StackChoice */
+        StackChoice: {
+            /** Choice */
+            choice: string;
+            /**
+             * Layer
+             * @description e.g. "frontend", "database".
+             */
+            layer: string;
+            /** Why */
+            why: string;
+        };
+        /** Tactic */
+        Tactic: {
+            /** Description */
+            description: string;
+            /** Name */
+            name: string;
+        };
+        /** UnitEconomics */
+        UnitEconomics: {
+            /** Arpa */
+            arpa: number;
+            /** Blended Cac */
+            blended_cac: number | null;
+            /** Gross Margin Pct */
+            gross_margin_pct: number;
+            /** Ltv */
+            ltv: number;
+            /** Ltv To Cac */
+            ltv_to_cac: number | null;
+            /** Payback Months */
+            payback_months: number | null;
+            /** Variable Cost Per Customer */
+            variable_cost_per_customer: number;
         };
     };
     responses: never;
@@ -1947,6 +2400,98 @@ export interface operations {
             };
             /** @description Validation error */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_plan_api_incubator_runs__run_id__plan_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    export_plan_api_incubator_runs__run_id__plan_export_get: {
+        parameters: {
+            query?: {
+                format?: "md" | "pdf";
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The dossier as a file download. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                    "text/markdown": string;
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description PDF rendering is unavailable */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

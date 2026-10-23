@@ -1,0 +1,1222 @@
+{
+  "run_id": "11111111-1111-4111-8111-111111111111",
+  "version": 1,
+  "created_at": "2026-10-23T10:00:00Z",
+  "plan": {
+    "idea_id": "00000000-0000-0000-0000-0000000000aa",
+    "brief": {
+      "rank": 1,
+      "composite_score": 7.0,
+      "opportunity": {
+        "title": "Dental reminders",
+        "one_liner": "Dental reminders: a focused fix for a manual chore",
+        "problem": "Owners lose hours every week because dental reminders is manual.",
+        "target_customer": "Owners who need dental reminders",
+        "industry": "healthcare",
+        "business_model": "b2b",
+        "signals": [
+          {
+            "category": "complaint_thread",
+            "url": "https://news.example/2026/dental-phone-confirmations",
+            "evidence": "Owners complain."
+          }
+        ],
+        "novelty_score": 7,
+        "signal_strength": 7,
+        "is_generic": false,
+        "id": "opp-01",
+        "iteration": 1
+      },
+      "analysis": {
+        "sizing": {
+          "method": "top_down",
+          "method_explanation": "Sector spend narrowed to independent practices.",
+          "tam": {
+            "value": 4100000000.0,
+            "unit": "USD/year",
+            "source_url": "https://research.example/reports/practice-management-2026",
+            "assumption": null
+          },
+          "sam": {
+            "value": 410000000.0,
+            "unit": "USD/year",
+            "source_url": null,
+            "assumption": "10% are independents."
+          },
+          "som": {
+            "value": 8200000.0,
+            "unit": "USD/year",
+            "source_url": null,
+            "assumption": "2% share in 3 years."
+          }
+        },
+        "competitors": [
+          {
+            "name": "BigSuite",
+            "url": null,
+            "positioning": "Enterprise practice suite.",
+            "price": {
+              "value": 129.0,
+              "unit": "USD/month",
+              "source_url": null,
+              "assumption": "Seat price."
+            }
+          }
+        ],
+        "pricing_benchmarks": [
+          {
+            "product": "Point tool",
+            "price": {
+              "value": 49.0,
+              "unit": "USD/month",
+              "source_url": null,
+              "assumption": "Typical SMB tier."
+            },
+            "billing": "monthly"
+          }
+        ],
+        "segments": [
+          {
+            "name": "Independents",
+            "description": "Owner-run clinics.",
+            "size": null
+          }
+        ],
+        "summary": "A sizeable, fragmented market served mostly by enterprise suites.",
+        "opportunity_id": "opp-01"
+      },
+      "critique": {
+        "scores": [
+          {
+            "dimension": "cac_risk",
+            "score": 7,
+            "justification": "Reason for cac_risk."
+          },
+          {
+            "dimension": "channel_dependency",
+            "score": 7,
+            "justification": "Reason for channel_dependency."
+          },
+          {
+            "dimension": "churn_risk",
+            "score": 7,
+            "justification": "Reason for churn_risk."
+          },
+          {
+            "dimension": "defensibility",
+            "score": 7,
+            "justification": "Reason for defensibility."
+          },
+          {
+            "dimension": "regulatory_risk",
+            "score": 7,
+            "justification": "Reason for regulatory_risk."
+          },
+          {
+            "dimension": "time_to_first_revenue",
+            "score": 7,
+            "justification": "Reason for time_to_first_revenue."
+          },
+          {
+            "dimension": "solo_founder_feasibility",
+            "score": 7,
+            "justification": "Reason for solo_founder_feasibility."
+          }
+        ],
+        "most_likely_failure_cause": "Owners stick with the phone because it already works.",
+        "attack_summary": "Distribution is the hard part; the product is easy to copy.",
+        "opportunity_id": "opp-01"
+      }
+    },
+    "executive_summary": "Dental reminders is developed here into an offline business plan. The product, go-to-market and financial sections were produced deterministically. Average revenue per account is $63.70 in the base case. Read the bear case before committing.",
+    "product": {
+      "mvp_summary": "A focused first version of Dental reminders that runs the core workflow.",
+      "features": [
+        {
+          "name": "Account and onboarding",
+          "description": "Account and onboarding for the first customers of the product.",
+          "scope": "now",
+          "estimate_days": 10.0
+        },
+        {
+          "name": "Core workflow",
+          "description": "Core workflow for the first customers of the product.",
+          "scope": "now",
+          "estimate_days": 10.0
+        },
+        {
+          "name": "Notifications and reporting",
+          "description": "Notifications and reporting for the first customers of the product.",
+          "scope": "now",
+          "estimate_days": 10.0
+        },
+        {
+          "name": "Integrations",
+          "description": "Connectors to tools customers already use.",
+          "scope": "later",
+          "estimate_days": 15.0
+        }
+      ],
+      "architecture": "A server-rendered web app with a relational database, a background job queue for notifications, and a thin integration layer.",
+      "components": [
+        {
+          "name": "Web app",
+          "responsibility": "User interface and the HTTP API."
+        },
+        {
+          "name": "Worker",
+          "responsibility": "Scheduled jobs and outgoing notifications."
+        }
+      ],
+      "data_model": [
+        {
+          "name": "Account",
+          "fields": ["id", "name", "plan"],
+          "notes": null
+        },
+        {
+          "name": "Job",
+          "fields": ["id", "account_id", "status", "due_at"],
+          "notes": null
+        }
+      ],
+      "stack": [
+        {
+          "layer": "backend",
+          "choice": "Python with FastAPI",
+          "why": "Fast to build with and simple for one person to operate."
+        },
+        {
+          "layer": "database",
+          "choice": "PostgreSQL",
+          "why": "Reliable, well understood, and enough for years of growth."
+        }
+      ],
+      "build_estimate_weeks": 6.0,
+      "build_estimate_basis": "Three MVP features at 10 days each, 30 days = 6 weeks full time."
+    },
+    "gtm": {
+      "positioning": "Dental reminders: the simplest way for Owners who need dental reminders to fix the problem.",
+      "icp": {
+        "description": "Owners who need dental reminders who feel the problem every week.",
+        "attributes": ["Owner-operated", "Uses spreadsheets today"],
+        "pains": ["Manual follow-up work", "Missed revenue"],
+        "buying_trigger": "A busy season that makes the manual process break."
+      },
+      "channels": [
+        {
+          "channel": "partnerships",
+          "rationale": "Reaches Owners who need dental reminders where they look for help.",
+          "expected_cac": {
+            "value": 114.0,
+            "unit": "USD",
+            "source_url": null,
+            "assumption": "Offline estimate for partnerships."
+          }
+        },
+        {
+          "channel": "paid_social",
+          "rationale": "Reaches Owners who need dental reminders where they look for help.",
+          "expected_cac": {
+            "value": 184.0,
+            "unit": "USD",
+            "source_url": null,
+            "assumption": "Offline estimate for paid_social."
+          }
+        }
+      ],
+      "zero_budget_tactics": [
+        {
+          "name": "Founder-led outreach",
+          "description": "Personal messages to operators."
+        }
+      ],
+      "viral_loops": [
+        {
+          "name": "Shared reports",
+          "description": "Shared reports carry a sign-up link."
+        }
+      ],
+      "first_100_customers": [
+        {
+          "step": "Design partners",
+          "description": "Recruit a handful of design partners."
+        },
+        {
+          "step": "Referrals",
+          "description": "Ask each happy customer for two introductions."
+        }
+      ]
+    },
+    "assumptions": {
+      "price_tiers": [
+        {
+          "name": "Basic",
+          "price_monthly": {
+            "value": 49.0,
+            "unit": "USD/month",
+            "source_url": null,
+            "assumption": "Matches the comparable point solution's price."
+          },
+          "mix": {
+            "value": 0.7,
+            "unit": "share",
+            "source_url": null,
+            "assumption": "Most small customers start on Basic."
+          }
+        },
+        {
+          "name": "Pro",
+          "price_monthly": {
+            "value": 98.0,
+            "unit": "USD/month",
+            "source_url": null,
+            "assumption": "Twice the Basic price for teams."
+          },
+          "mix": {
+            "value": 0.3,
+            "unit": "share",
+            "source_url": null,
+            "assumption": "Remaining customers choose Pro."
+          }
+        }
+      ],
+      "channels": [
+        {
+          "channel": "partnerships",
+          "cac": {
+            "value": 114.0,
+            "unit": "USD",
+            "source_url": null,
+            "assumption": "Offline estimate for partnerships."
+          },
+          "monthly_spend": {
+            "value": 500.0,
+            "unit": "USD/month",
+            "source_url": null,
+            "assumption": "Test budget."
+          }
+        },
+        {
+          "channel": "paid_social",
+          "cac": {
+            "value": 184.0,
+            "unit": "USD",
+            "source_url": null,
+            "assumption": "Offline estimate for paid_social."
+          },
+          "monthly_spend": {
+            "value": 1000.0,
+            "unit": "USD/month",
+            "source_url": null,
+            "assumption": "Test budget."
+          }
+        }
+      ],
+      "organic_signups_m1": {
+        "value": 80.0,
+        "unit": "signups",
+        "source_url": null,
+        "assumption": "Founder network and launch posts."
+      },
+      "organic_growth": {
+        "value": 0.15,
+        "unit": "share/month",
+        "source_url": null,
+        "assumption": "Word of mouth in a niche."
+      },
+      "free_to_paid": {
+        "value": 0.08,
+        "unit": "share",
+        "source_url": null,
+        "assumption": "Typical SMB trial conversion."
+      },
+      "monthly_churn": {
+        "value": 0.04,
+        "unit": "share/month",
+        "source_url": null,
+        "assumption": "Small-business SaaS churn."
+      },
+      "payment_fee_pct": {
+        "value": 0.03,
+        "unit": "share",
+        "source_url": null,
+        "assumption": "Card processing fee."
+      },
+      "variable_cost_per_customer": {
+        "value": 4.0,
+        "unit": "USD/month",
+        "source_url": null,
+        "assumption": "Hosting and support."
+      },
+      "fixed_costs": [
+        {
+          "name": "Tools and hosting",
+          "monthly": {
+            "value": 400.0,
+            "unit": "USD/month",
+            "source_url": null,
+            "assumption": "Tools."
+          }
+        },
+        {
+          "name": "Founder salary",
+          "monthly": {
+            "value": 2500.0,
+            "unit": "USD/month",
+            "source_url": null,
+            "assumption": "Minimum living cost."
+          }
+        }
+      ],
+      "starting_cash": {
+        "value": 25000.0,
+        "unit": "USD",
+        "source_url": null,
+        "assumption": "The founder's available capital."
+      },
+      "launch_month": 2,
+      "launch_rationale": "Customers start in the month after the MVP build is finished."
+    },
+    "financials": {
+      "scenarios": {
+        "base": {
+          "scenario": "base",
+          "multipliers": {
+            "cac": 1.0,
+            "free_to_paid": 1.0,
+            "monthly_churn": 1.0,
+            "organic_growth": 1.0
+          },
+          "unit_economics": {
+            "arpa": 63.699999999999996,
+            "variable_cost_per_customer": 5.911,
+            "gross_margin_pct": 0.9072056514913658,
+            "blended_cac": 152.73786407766988,
+            "ltv": 1444.725,
+            "ltv_to_cac": 9.458852974828377,
+            "payback_months": 2.643026598101194
+          },
+          "channels": [
+            {
+              "channel": "partnerships",
+              "cac": 114.0,
+              "monthly_spend": 500.0,
+              "new_customers_per_month": 4.385964912280702
+            },
+            {
+              "channel": "paid_social",
+              "cac": 184.0,
+              "monthly_spend": 1000.0,
+              "new_customers_per_month": 5.434782608695652
+            }
+          ],
+          "months": [
+            {
+              "month": 1,
+              "signups": 0.0,
+              "new_customers": 0.0,
+              "customers": 0.0,
+              "mrr": 0.0,
+              "cogs": 0.0,
+              "gross_profit": 0.0,
+              "opex": 2900.0,
+              "net_cash_flow": -2900.0,
+              "cash": 22100.0
+            },
+            {
+              "month": 2,
+              "signups": 80.0,
+              "new_customers": 16.220747520976353,
+              "customers": 16.220747520976353,
+              "mrr": 1033.2616170861936,
+              "cogs": 95.88083859649122,
+              "gross_profit": 937.3807784897024,
+              "opex": 4400.0,
+              "net_cash_flow": -3462.6192215102974,
+              "cash": 18637.380778489704
+            },
+            {
+              "month": 3,
+              "signups": 92.0,
+              "new_customers": 17.180747520976354,
+              "customers": 32.75266514111365,
+              "mrr": 2086.3447694889396,
+              "cogs": 193.6010036491228,
+              "gross_profit": 1892.743765839817,
+              "opex": 4400.0,
+              "net_cash_flow": -2507.2562341601833,
+              "cash": 16130.12454432952
+            },
+            {
+              "month": 4,
+              "signups": 105.79999999999998,
+              "new_customers": 18.284747520976353,
+              "customers": 49.72730605644546,
+              "mrr": 3167.6293957955754,
+              "cogs": 293.9381060996491,
+              "gross_profit": 2873.6912896959266,
+              "opex": 4400.0,
+              "net_cash_flow": -1526.3087103040734,
+              "cash": 14603.815834025445
+            },
+            {
+              "month": 5,
+              "signups": 121.66999999999999,
+              "new_customers": 19.554347520976354,
+              "customers": 67.292561335164,
+              "mrr": 4286.536157049946,
+              "cogs": 397.76633005215433,
+              "gross_profit": 3888.769826997792,
+              "opex": 4400.0,
+              "net_cash_flow": -511.2301730022082,
+              "cash": 14092.585661023237
+            },
+            {
+              "month": 6,
+              "signups": 139.92049999999995,
+              "new_customers": 21.01438752097635,
+              "customers": 85.61524640273379,
+              "mrr": 5453.691195854142,
+              "cogs": 506.0717214865594,
+              "gross_profit": 4947.619474367583,
+              "opex": 4400.0,
+              "net_cash_flow": 547.6194743675833,
+              "cash": 14640.205135390821
+            },
+            {
+              "month": 7,
+              "signups": 160.90857499999996,
+              "new_customers": 22.69343352097635,
+              "customers": 104.88407006760079,
+              "mrr": 6681.11526330617,
+              "cogs": 619.9697381695883,
+              "gross_profit": 6061.145525136582,
+              "opex": 4400.0,
+              "net_cash_flow": 1661.1455251365824,
+              "cash": 16301.350660527403
+            },
+            {
+              "month": 8,
+              "signups": 185.04486124999994,
+              "new_customers": 24.62433642097635,
+              "customers": 125.3130436858731,
+              "mrr": 7982.440882790116,
+              "cogs": 740.7254012271958,
+              "gross_profit": 7241.71548156292,
+              "opex": 4400.0,
+              "net_cash_flow": 2841.71548156292,
+              "cash": 19143.066142090323
+            },
+            {
+              "month": 9,
+              "signups": 212.8015904374999,
+              "new_customers": 26.844874755976345,
+              "customers": 147.1453966944145,
+              "mrr": 9373.161769434204,
+              "cogs": 869.776439860684,
+              "gross_profit": 8503.38532957352,
+              "opex": 4400.0,
+              "net_cash_flow": 4103.385329573521,
+              "cash": 23246.451471663844
+            },
+            {
+              "month": 10,
+              "signups": 244.72182900312487,
+              "new_customers": 29.398493841226344,
+              "customers": 170.65807466786427,
+              "mrr": 10870.919356342953,
+              "cogs": 1008.7598793617457,
+              "gross_profit": 9862.159476981207,
+              "opex": 4400.0,
+              "net_cash_flow": 5462.159476981207,
+              "cash": 28708.61094864505
+            },
+            {
+              "month": 11,
+              "signups": 281.43010335359355,
+              "new_customers": 32.33515578926384,
+              "customers": 196.16690747041352,
+              "mrr": 12495.83200586534,
+              "cogs": 1159.5425900576142,
+              "gross_profit": 11336.289415807727,
+              "opex": 4400.0,
+              "net_cash_flow": 6936.289415807727,
+              "cash": 35644.90036445278
+            },
+            {
+              "month": 12,
+              "signups": 323.6446188566325,
+              "new_customers": 35.712317029506956,
+              "customers": 224.0325482011039,
+              "mrr": 14270.873320410317,
+              "cogs": 1324.256392416725,
+              "gross_profit": 12946.616927993593,
+              "opex": 4400.0,
+              "net_cash_flow": 8546.616927993593,
+              "cash": 44191.51729244637
+            }
+          ],
+          "break_even_month": 6,
+          "cash_out_month": null,
+          "runway_after_m12": null
+        },
+        "bear": {
+          "scenario": "bear",
+          "multipliers": {
+            "cac": 1.3,
+            "free_to_paid": 0.7,
+            "monthly_churn": 1.5,
+            "organic_growth": 0.5
+          },
+          "unit_economics": {
+            "arpa": 63.699999999999996,
+            "variable_cost_per_customer": 5.911,
+            "gross_margin_pct": 0.9072056514913658,
+            "blended_cac": 198.5592233009709,
+            "ltv": 963.15,
+            "ltv_to_cac": 4.8506938332453196,
+            "payback_months": 3.435934577531553
+          },
+          "channels": [
+            {
+              "channel": "partnerships",
+              "cac": 148.20000000000002,
+              "monthly_spend": 500.0,
+              "new_customers_per_month": 3.373819163292847
+            },
+            {
+              "channel": "paid_social",
+              "cac": 239.20000000000002,
+              "monthly_spend": 1000.0,
+              "new_customers_per_month": 4.180602006688963
+            }
+          ],
+          "months": [
+            {
+              "month": 1,
+              "signups": 0.0,
+              "new_customers": 0.0,
+              "customers": 0.0,
+              "mrr": 0.0,
+              "cogs": 0.0,
+              "gross_profit": 0.0,
+              "opex": 2900.0,
+              "net_cash_flow": -2900.0,
+              "cash": 22100.0
+            },
+            {
+              "month": 2,
+              "signups": 80.0,
+              "new_customers": 12.034421169981808,
+              "customers": 12.034421169981808,
+              "mrr": 766.5926285278412,
+              "cogs": 71.13546353576247,
+              "gross_profit": 695.4571649920787,
+              "opex": 4400.0,
+              "net_cash_flow": -3704.5428350079214,
+              "cash": 18395.45716499208
+            },
+            {
+              "month": 3,
+              "signups": 86.0,
+              "new_customers": 12.37042116998181,
+              "customers": 23.68277706976471,
+              "mrr": 1508.592899344012,
+              "cogs": 139.9888952593792,
+              "gross_profit": 1368.6040040846328,
+              "opex": 4400.0,
+              "net_cash_flow": -3031.395995915367,
+              "cash": 15364.061169076713
+            },
+            {
+              "month": 4,
+              "signups": 92.44999999999999,
+              "new_customers": 12.731621169981809,
+              "customers": 34.99343161556064,
+              "mrr": 2229.0815939112126,
+              "cogs": 206.84617427957892,
+              "gross_profit": 2022.2354196316337,
+              "opex": 4400.0,
+              "net_cash_flow": -2377.7645803683663,
+              "cash": 12986.296588708346
+            },
+            {
+              "month": 5,
+              "signups": 99.38374999999999,
+              "new_customers": 13.119911169981808,
+              "customers": 46.013736888608804,
+              "mrr": 2931.0750398043806,
+              "cogs": 271.98719874856664,
+              "gross_profit": 2659.087841055814,
+              "opex": 4400.0,
+              "net_cash_flow": -1740.912158944186,
+              "cash": 11245.38442976416
+            },
+            {
+              "month": 6,
+              "signups": 106.83753124999998,
+              "new_customers": 13.537322919981808,
+              "customers": 56.79023559527408,
+              "mrr": 3617.538007418959,
+              "cogs": 335.6870826036651,
+              "gross_profit": 3281.8509248152936,
+              "opex": 4400.0,
+              "net_cash_flow": -1118.1490751847064,
+              "cash": 10127.235354579454
+            },
+            {
+              "month": 7,
+              "signups": 114.85034609374998,
+              "new_customers": 13.986040551231808,
+              "customers": 67.36886201078944,
+              "mrr": 4291.396510087287,
+              "cogs": 398.2173433457764,
+              "gross_profit": 3893.179166741511,
+              "opex": 4400.0,
+              "net_cash_flow": -506.8208332584891,
+              "cash": 9620.414521320965
+            },
+            {
+              "month": 8,
+              "signups": 123.46412205078123,
+              "new_customers": 14.468412004825558,
+              "customers": 77.79514229496763,
+              "mrr": 4955.550564189438,
+              "cogs": 459.8470861055537,
+              "gross_profit": 4495.703478083884,
+              "opex": 4400.0,
+              "net_cash_flow": 95.70347808388397,
+              "cash": 9716.117999404849
+            },
+            {
+              "month": 9,
+              "signups": 132.7239312045898,
+              "new_customers": 14.986961317438837,
+              "customers": 88.11439507470841,
+              "mrr": 5612.886966258926,
+              "cogs": 520.8441892866014,
+              "gross_profit": 5092.042776972325,
+              "opex": 4400.0,
+              "net_cash_flow": 692.0427769723246,
+              "cash": 10408.160776377174
+            },
+            {
+              "month": 10,
+              "signups": 142.67822604493404,
+              "new_customers": 15.544401828498115,
+              "customers": 98.37193319872401,
+              "mrr": 6266.292144758719,
+              "cogs": 581.4764971376576,
+              "gross_profit": 5684.815647621061,
+              "opex": 4400.0,
+              "net_cash_flow": 1284.8156476210606,
+              "cash": 11692.976423998234
+            },
+            {
+              "month": 11,
+              "signups": 153.3790929983041,
+              "new_customers": 16.143650377886836,
+              "customers": 108.6132675846874,
+              "mrr": 6918.665145144588,
+              "cogs": 642.0130246930872,
+              "gross_profit": 6276.6521204515,
+              "opex": 4400.0,
+              "net_cash_flow": 1876.6521204515002,
+              "cash": 13569.628544449733
+            },
+            {
+              "month": 12,
+              "signups": 164.88252497317688,
+              "new_customers": 16.787842568479714,
+              "customers": 118.88431409808588,
+              "mrr": 7572.9308080480705,
+              "cogs": 702.7251806337856,
+              "gross_profit": 6870.205627414285,
+              "opex": 4400.0,
+              "net_cash_flow": 2470.205627414285,
+              "cash": 16039.834171864019
+            }
+          ],
+          "break_even_month": 8,
+          "cash_out_month": null,
+          "runway_after_m12": null
+        },
+        "bull": {
+          "scenario": "bull",
+          "multipliers": {
+            "cac": 0.8,
+            "free_to_paid": 1.3,
+            "monthly_churn": 0.7,
+            "organic_growth": 1.5
+          },
+          "unit_economics": {
+            "arpa": 63.699999999999996,
+            "variable_cost_per_customer": 5.911,
+            "gross_margin_pct": 0.9072056514913658,
+            "blended_cac": 122.19029126213593,
+            "ltv": 2063.8928571428573,
+            "ltv_to_cac": 16.8908088836221,
+            "payback_months": 2.1144212784809557
+          },
+          "channels": [
+            {
+              "channel": "partnerships",
+              "cac": 91.2,
+              "monthly_spend": 500.0,
+              "new_customers_per_month": 5.482456140350877
+            },
+            {
+              "channel": "paid_social",
+              "cac": 147.20000000000002,
+              "monthly_spend": 1000.0,
+              "new_customers_per_month": 6.7934782608695645
+            }
+          ],
+          "months": [
+            {
+              "month": 1,
+              "signups": 0.0,
+              "new_customers": 0.0,
+              "customers": 0.0,
+              "mrr": 0.0,
+              "cogs": 0.0,
+              "gross_profit": 0.0,
+              "opex": 2900.0,
+              "net_cash_flow": -2900.0,
+              "cash": 22100.0
+            },
+            {
+              "month": 2,
+              "signups": 80.0,
+              "new_customers": 20.59593440122044,
+              "customers": 20.59593440122044,
+              "mrr": 1311.9610213577419,
+              "cogs": 121.74256824561401,
+              "gross_profit": 1190.218453112128,
+              "opex": 4400.0,
+              "net_cash_flow": -3209.781546887872,
+              "cash": 18890.218453112127
+            },
+            {
+              "month": 3,
+              "signups": 98.0,
+              "new_customers": 22.46793440122044,
+              "customers": 42.48718263920671,
+              "mrr": 2706.433534117467,
+              "cogs": 251.14173658035082,
+              "gross_profit": 2455.291797537116,
+              "opex": 4400.0,
+              "net_cash_flow": -1944.708202462884,
+              "cash": 16945.510250649244
+            },
+            {
+              "month": 4,
+              "signups": 120.05000000000003,
+              "new_customers": 24.761134401220446,
+              "customers": 66.05867592652936,
+              "mrr": 4207.93765651992,
+              "cogs": 390.47283340171504,
+              "gross_profit": 3817.464823118205,
+              "opex": 4400.0,
+              "net_cash_flow": -582.535176881795,
+              "cash": 16362.97507376745
+            },
+            {
+              "month": 5,
+              "signups": 147.06125000000003,
+              "new_customers": 27.570304401220447,
+              "customers": 91.779337401807,
+              "mrr": 5846.343792495106,
+              "cogs": 542.5076633820811,
+              "gross_profit": 5303.836129113025,
+              "opex": 4400.0,
+              "net_cash_flow": 903.836129113025,
+              "cash": 17266.811202880475
+            },
+            {
+              "month": 6,
+              "signups": 180.15003125000007,
+              "new_customers": 31.01153765122045,
+              "customers": 120.22105360577685,
+              "mrr": 7658.081114687984,
+              "cogs": 710.6266478637468,
+              "gross_profit": 6947.454466824237,
+              "opex": 4400.0,
+              "net_cash_flow": 2547.454466824237,
+              "cash": 19814.265669704713
+            },
+            {
+              "month": 7,
+              "signups": 220.6837882812501,
+              "new_customers": 35.22704838247045,
+              "customers": 152.08191248728554,
+              "mrr": 9687.617825440087,
+              "cogs": 898.9561847123448,
+              "gross_profit": 8788.661640727743,
+              "opex": 4400.0,
+              "net_cash_flow": 4388.661640727743,
+              "cash": 24202.927310432457
+            },
+            {
+              "month": 8,
+              "signups": 270.33764064453135,
+              "new_customers": 40.39104902825171,
+              "customers": 188.21466796589323,
+              "mrr": 11989.274349427398,
+              "cogs": 1112.5369023463948,
+              "gross_profit": 10876.737447081003,
+              "opex": 4400.0,
+              "net_cash_flow": 6476.737447081003,
+              "cash": 30679.66475751346
+            },
+            {
+              "month": 9,
+              "signups": 331.16360978955095,
+              "new_customers": 46.71694981933374,
+              "customers": 229.66160708218194,
+              "mrr": 14629.444371134989,
+              "cogs": 1357.5297594627773,
+              "gross_profit": 13271.914611672211,
+              "opex": 4400.0,
+              "net_cash_flow": 8871.914611672211,
+              "cash": 39551.57936918567
+            },
+            {
+              "month": 10,
+              "signups": 405.6754219921999,
+              "new_customers": 54.46617828840923,
+              "customers": 277.6972603722901,
+              "mrr": 17689.315485714877,
+              "cogs": 1641.4685060606066,
+              "gross_profit": 16047.84697965427,
+              "opex": 4400.0,
+              "net_cash_flow": 11647.84697965427,
+              "cash": 51199.42634883994
+            },
+            {
+              "month": 11,
+              "signups": 496.95239194044495,
+              "new_customers": 63.95898316302672,
+              "customers": 333.8807202448927,
+              "mrr": 21268.201879599663,
+              "cogs": 1973.5689373675607,
+              "gross_profit": 19294.632942232103,
+              "opex": 4400.0,
+              "net_cash_flow": 14894.632942232103,
+              "cash": 66094.05929107204
+            },
+            {
+              "month": 12,
+              "signups": 608.7666801270451,
+              "new_customers": 75.58766913443314,
+              "customers": 400.1197292124688,
+              "mrr": 25487.62675083426,
+              "cogs": 2365.107719374903,
+              "gross_profit": 23122.519031459356,
+              "opex": 4400.0,
+              "net_cash_flow": 18722.519031459356,
+              "cash": 84816.5783225314
+            }
+          ],
+          "break_even_month": 5,
+          "cash_out_month": null,
+          "runway_after_m12": null
+        }
+      }
+    },
+    "contradictions": [
+      {
+        "code": "channel_cac_mismatch",
+        "origin": "check",
+        "severity": "high",
+        "sections": ["gtm", "financials"],
+        "description": "The GTM plan expects a CAC of $90.00 for this channel, the financial model uses $114.00.",
+        "resolution": "Agree on one CAC; the projections use the financial model's.",
+        "figures": [],
+        "untraced": []
+      },
+      {
+        "code": "editor_review",
+        "origin": "editor",
+        "severity": "medium",
+        "sections": ["product", "gtm"],
+        "description": "The ICP is clinics with staff, but the MVP targets solo practitioners.",
+        "resolution": "Pick one ICP before building.",
+        "figures": [],
+        "untraced": []
+      }
+    ],
+    "risks": [
+      {
+        "risk": "Owners stick with the phone because it already works.",
+        "mitigation": "Run paid pilots before building more."
+      }
+    ],
+    "checklist": {
+      "day_30": ["Recruit design partners", "Build the core workflow"],
+      "day_60": ["Launch to design partners", "Start the first paid channel"],
+      "day_90": ["Review unit economics", "Decide on the second channel"]
+    }
+  },
+  "engine_formulas": [
+    {
+      "key": "arpa",
+      "label": "ARPA",
+      "formula": "Σ tier price * tier mix",
+      "inputs": ["mix", "price_monthly"]
+    },
+    {
+      "key": "variable_cost_per_customer",
+      "label": "Variable cost per customer",
+      "formula": "variable cost per customer + ARPA * payment fee",
+      "inputs": ["mix", "payment_fee_pct", "price_monthly", "variable_cost_per_customer"]
+    },
+    {
+      "key": "gross_margin_pct",
+      "label": "Gross margin",
+      "formula": "(ARPA - variable cost per customer) / ARPA",
+      "inputs": ["mix", "payment_fee_pct", "price_monthly", "variable_cost_per_customer"]
+    },
+    {
+      "key": "blended_cac",
+      "label": "Blended CAC",
+      "formula": "Σ channel spend / Σ (channel spend / channel CAC)",
+      "inputs": ["channel_cac", "channel_spend"]
+    },
+    {
+      "key": "ltv",
+      "label": "LTV",
+      "formula": "ARPA * gross margin / monthly churn",
+      "inputs": [
+        "mix",
+        "monthly_churn",
+        "payment_fee_pct",
+        "price_monthly",
+        "variable_cost_per_customer"
+      ]
+    },
+    {
+      "key": "ltv_to_cac",
+      "label": "LTV:CAC",
+      "formula": "LTV / blended CAC",
+      "inputs": [
+        "channel_cac",
+        "channel_spend",
+        "mix",
+        "monthly_churn",
+        "payment_fee_pct",
+        "price_monthly",
+        "variable_cost_per_customer"
+      ]
+    },
+    {
+      "key": "payback_months",
+      "label": "Payback (months)",
+      "formula": "blended CAC / (ARPA * gross margin)",
+      "inputs": [
+        "channel_cac",
+        "channel_spend",
+        "mix",
+        "payment_fee_pct",
+        "price_monthly",
+        "variable_cost_per_customer"
+      ]
+    },
+    {
+      "key": "channels.new_customers_per_month",
+      "label": "New customers per channel",
+      "formula": "channel spend / channel CAC",
+      "inputs": ["channel_cac", "channel_spend"]
+    },
+    {
+      "key": "months.signups",
+      "label": "Signups",
+      "formula": "organic signups * (1 + organic growth)^(month - launch month)",
+      "inputs": ["launch_month", "organic_growth", "organic_signups_m1"]
+    },
+    {
+      "key": "months.new_customers",
+      "label": "New customers",
+      "formula": "signups * free-to-paid + Σ paid new customers",
+      "inputs": [
+        "channel_cac",
+        "channel_spend",
+        "free_to_paid",
+        "launch_month",
+        "organic_growth",
+        "organic_signups_m1"
+      ]
+    },
+    {
+      "key": "months.customers",
+      "label": "Customers",
+      "formula": "previous customers * (1 - churn) + new customers",
+      "inputs": [
+        "channel_cac",
+        "channel_spend",
+        "free_to_paid",
+        "launch_month",
+        "monthly_churn",
+        "organic_growth",
+        "organic_signups_m1"
+      ]
+    },
+    {
+      "key": "months.mrr",
+      "label": "MRR",
+      "formula": "customers * ARPA",
+      "inputs": [
+        "channel_cac",
+        "channel_spend",
+        "free_to_paid",
+        "launch_month",
+        "mix",
+        "monthly_churn",
+        "organic_growth",
+        "organic_signups_m1",
+        "price_monthly"
+      ]
+    },
+    {
+      "key": "months.cogs",
+      "label": "COGS",
+      "formula": "customers * variable cost per customer",
+      "inputs": [
+        "channel_cac",
+        "channel_spend",
+        "free_to_paid",
+        "launch_month",
+        "mix",
+        "monthly_churn",
+        "organic_growth",
+        "organic_signups_m1",
+        "payment_fee_pct",
+        "price_monthly",
+        "variable_cost_per_customer"
+      ]
+    },
+    {
+      "key": "months.gross_profit",
+      "label": "Gross profit",
+      "formula": "MRR - COGS",
+      "inputs": [
+        "channel_cac",
+        "channel_spend",
+        "free_to_paid",
+        "launch_month",
+        "mix",
+        "monthly_churn",
+        "organic_growth",
+        "organic_signups_m1",
+        "payment_fee_pct",
+        "price_monthly",
+        "variable_cost_per_customer"
+      ]
+    },
+    {
+      "key": "months.opex",
+      "label": "Opex",
+      "formula": "Σ fixed costs + Σ channel spend (from launch)",
+      "inputs": ["channel_spend", "fixed_costs", "launch_month"]
+    },
+    {
+      "key": "months.net_cash_flow",
+      "label": "Net cash flow",
+      "formula": "gross profit - opex",
+      "inputs": [
+        "channel_cac",
+        "channel_spend",
+        "fixed_costs",
+        "free_to_paid",
+        "launch_month",
+        "mix",
+        "monthly_churn",
+        "organic_growth",
+        "organic_signups_m1",
+        "payment_fee_pct",
+        "price_monthly",
+        "variable_cost_per_customer"
+      ]
+    },
+    {
+      "key": "months.cash",
+      "label": "Cash",
+      "formula": "previous cash + net cash flow",
+      "inputs": [
+        "channel_cac",
+        "channel_spend",
+        "fixed_costs",
+        "free_to_paid",
+        "launch_month",
+        "mix",
+        "monthly_churn",
+        "organic_growth",
+        "organic_signups_m1",
+        "payment_fee_pct",
+        "price_monthly",
+        "starting_cash",
+        "variable_cost_per_customer"
+      ]
+    },
+    {
+      "key": "break_even_month",
+      "label": "Break-even month",
+      "formula": "first month with net cash flow of 0 or more",
+      "inputs": [
+        "channel_cac",
+        "channel_spend",
+        "fixed_costs",
+        "free_to_paid",
+        "launch_month",
+        "mix",
+        "monthly_churn",
+        "organic_growth",
+        "organic_signups_m1",
+        "payment_fee_pct",
+        "price_monthly",
+        "variable_cost_per_customer"
+      ]
+    },
+    {
+      "key": "cash_out_month",
+      "label": "Cash-out month",
+      "formula": "first month with cash < 0",
+      "inputs": [
+        "channel_cac",
+        "channel_spend",
+        "fixed_costs",
+        "free_to_paid",
+        "launch_month",
+        "mix",
+        "monthly_churn",
+        "organic_growth",
+        "organic_signups_m1",
+        "payment_fee_pct",
+        "price_monthly",
+        "starting_cash",
+        "variable_cost_per_customer"
+      ]
+    },
+    {
+      "key": "runway_after_m12",
+      "label": "Runway after month 12",
+      "formula": "month-12 cash / month-12 burn",
+      "inputs": [
+        "channel_cac",
+        "channel_spend",
+        "fixed_costs",
+        "free_to_paid",
+        "launch_month",
+        "mix",
+        "monthly_churn",
+        "organic_growth",
+        "organic_signups_m1",
+        "payment_fee_pct",
+        "price_monthly",
+        "starting_cash",
+        "variable_cost_per_customer"
+      ]
+    }
+  ]
+}

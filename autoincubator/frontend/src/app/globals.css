@@ -20,6 +20,13 @@
   --color-agent-skeptic: var(--agent-skeptic);
   --color-agent-ranker: var(--agent-ranker);
   --color-agent-run: var(--agent-run);
+  --color-agent-architect: var(--agent-architect);
+  --color-agent-gtm: var(--agent-gtm);
+  --color-agent-finance: var(--agent-finance);
+  --color-agent-editor: var(--agent-editor);
+  --color-scenario-base: var(--scenario-base);
+  --color-scenario-bear: var(--scenario-bear);
+  --color-scenario-bull: var(--scenario-bull);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -87,6 +94,14 @@
   --agent-skeptic: oklch(0.55 0.14 20);
   --agent-ranker: oklch(0.5 0.085 190);
   --agent-run: oklch(0.55 0.014 60);
+  --agent-architect: oklch(0.52 0.1 300);
+  --agent-gtm: oklch(0.55 0.11 145);
+  --agent-finance: oklch(0.5 0.085 190);
+  --agent-editor: oklch(0.45 0.03 60);
+  /* Base/bear/bull: validated with the dataviz palette checks against --card (light). */
+  --scenario-base: oklch(0.56 0.11 175);
+  --scenario-bear: oklch(0.62 0.15 65);
+  --scenario-bull: oklch(0.52 0.17 260);
   --chart-1: oklch(0.5 0.085 190);
   --chart-2: oklch(0.6 0.12 70);
   --chart-3: oklch(0.52 0.1 250);
@@ -131,6 +146,14 @@
   --agent-skeptic: oklch(0.72 0.13 20);
   --agent-ranker: oklch(0.72 0.09 190);
   --agent-run: oklch(0.68 0.012 70);
+  --agent-architect: oklch(0.72 0.1 300);
+  --agent-gtm: oklch(0.74 0.11 145);
+  --agent-finance: oklch(0.72 0.09 190);
+  --agent-editor: oklch(0.78 0.02 70);
+  /* Validated separately against the dark --card. */
+  --scenario-base: oklch(0.64 0.12 180);
+  --scenario-bear: oklch(0.66 0.14 68);
+  --scenario-bull: oklch(0.63 0.15 262);
   --chart-1: oklch(0.72 0.09 190);
   --chart-2: oklch(0.78 0.12 75);
   --chart-3: oklch(0.72 0.1 250);

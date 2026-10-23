@@ -4,11 +4,13 @@ import type {
   CreateRunRequest,
   CreateRunResponse,
   ErrorBody,
+  ExportFormat,
   FounderProfile,
   HealthResponse,
   IdeaDetail,
   IdeaView,
   JobAccepted,
+  PlanResponse,
   ProfileResponse,
   RunDetail,
   RunList,
@@ -131,6 +133,12 @@ export const api = {
       method: "POST",
       ...jsonBody({ idea_id: ideaId }),
     }),
+
+  // The business plan of a completed run (ADR 0007).
+  getPlan: (runId: string, signal?: AbortSignal) =>
+    apiFetch<PlanResponse>(`${runPath(runId)}/plan`, { signal }),
+  exportUrl: (runId: string, format: ExportFormat) =>
+    `${runPath(runId)}/plan/export?format=${format}`,
 };
 
 function runPath(runId: string): string {
