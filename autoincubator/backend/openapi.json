@@ -598,6 +598,39 @@
         "title": "Competitor",
         "type": "object"
       },
+      "CoworkDelta": {
+        "description": "`event: delta`: more reply text. `event: reset` (empty object) means discard the text\nso far: the model is retrying after invalid output.",
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "CoworkDelta",
+        "type": "object"
+      },
+      "CoworkFailed": {
+        "description": "`event: error`; the stored assistant message is marked failed.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "CoworkFailed",
+        "type": "object"
+      },
       "CoworkMessageList": {
         "properties": {
           "items": {
@@ -742,6 +775,23 @@
           "content"
         ],
         "title": "CoworkRequest",
+        "type": "object"
+      },
+      "CoworkStarted": {
+        "description": "First SSE event of a chat reply (`event: started`).",
+        "properties": {
+          "assistant_message": {
+            "$ref": "#/components/schemas/CoworkMessageView"
+          },
+          "user_message": {
+            "$ref": "#/components/schemas/CoworkMessageView"
+          }
+        },
+        "required": [
+          "user_message",
+          "assistant_message"
+        ],
+        "title": "CoworkStarted",
         "type": "object"
       },
       "CreateRunRequest": {
@@ -1614,6 +1664,7 @@
             "type": "string"
           },
           "value": {
+            "default": null,
             "title": "Value"
           }
         },

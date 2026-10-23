@@ -1,8 +1,10 @@
 "use client";
 
-import { ChevronDown, Link2, Skull } from "lucide-react";
-import { useState } from "react";
+import { ChevronDown, GitMerge, Link2, Loader2, MessagesSquare, Skull } from "lucide-react";
+import { useState, type ReactNode } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { EventOf, IdeaView } from "@/lib/api/types";
 import { formatFigure } from "@/lib/format";
@@ -43,19 +45,108 @@ function Rank({ rank }: { rank: number | null }) {
   );
 }
 
-export function IdeaCard({ idea }: { idea: IdeaView }) {
+function Badges({ idea, rescoring }: { idea: IdeaView; rescoring: boolean }) {
+  const badges: { key: string; className: string; label: ReactNode }[] = [];
+  if (idea.status === "rejected") {
+    badges.push({
+      key: "rejected",
+      className: "bg-destructive/10 text-destructive",
+      label: idea.reject_reason ? `Rejected: ${idea.reject_reason}` : "Rejected",
+    });
+  }
+  if (idea.status === "selected") {
+    badges.push({ key: "selected", className: "bg-signal-soft text-signal", label: "Selected" });
+  }
+  if (rescoring) {
+    badges.push({
+      key: "rescoring",
+      className: "bg-muted text-foreground",
+      label: (
+        <>
+          <Loader2 className="size-3 animate-spin" aria-hidden /> Re-scoring…
+        </>
+      ),
+    });
+  } else if (idea.score_stale) {
+    badges.push({
+      key: "stale",
+      className: "bg-warning-soft text-warning",
+      label: "Score out of date",
+    });
+  }
+  if (idea.merged_from.length > 0) {
+    badges.push({
+      key: "hybrid",
+      className: "bg-muted text-muted-foreground",
+      label: (
+        <>
+          <GitMerge className="size-3" aria-hidden /> Hybrid of {idea.merged_from.length}
+        </>
+      ),
+    });
+  }
+  if (badges.length === 0) return null;
+  return (
+    <ul className="mt-2 flex flex-wrap gap-1.5">
+      {badges.map((b) => (
+        <li
+          key={b.key}
+          data-badge={b.key}
+          className={cn("flex items-center gap-1 rounded px-1.5 py-0.5 text-xs", b.className)}
+        >
+          {b.label}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export interface IdeaCardActions {
+  /** Opens the co-working drawer on this idea. */
+  onOpen?: () => void;
+  /** Merge selection mode: a checkbox per active idea. */
+  selectable?: boolean;
+  selected?: boolean;
+  onSelectedChange?: (selected: boolean) => void;
+  rescoring?: boolean;
+}
+
+export function IdeaCard({ idea, actions = {} }: { idea: IdeaView; actions?: IdeaCardActions }) {
   const [open, setOpen] = useState(false);
   const { opportunity, analysis, critique } = idea;
   const sources = sourceUrls(idea);
   const { tam, sam, som } = analysis.sizing;
+  const {
+    onOpen,
+    selectable = false,
+    selected = false,
+    onSelectedChange,
+    rescoring = false,
+  } = actions;
 
   return (
     <article
       aria-labelledby={`idea-${idea.id}`}
-      className="bg-card flex flex-col gap-4 rounded-lg border p-4 shadow-xs"
+      data-status={idea.status}
+      className={cn(
+        "bg-card flex flex-col gap-4 rounded-lg border p-4 shadow-xs transition-colors",
+        idea.status === "rejected" && "opacity-60",
+        idea.status === "selected" && "border-signal/50",
+        selected && "border-primary ring-primary/20 ring-2",
+      )}
     >
       <header className="flex gap-3">
-        <Rank rank={idea.rank} />
+        {selectable ? (
+          <span className="w-6 shrink-0 pt-1">
+            <Checkbox
+              checked={selected}
+              onCheckedChange={(checked) => onSelectedChange?.(checked)}
+              aria-label={`Select “${idea.title}” for merging`}
+            />
+          </span>
+        ) : (
+          <Rank rank={idea.rank} />
+        )}
         <div className="min-w-0 flex-1">
           <h3 id={`idea-${idea.id}`} className="font-serif text-xl leading-tight">
             {idea.title}
@@ -63,6 +154,7 @@ export function IdeaCard({ idea }: { idea: IdeaView }) {
           <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
             {opportunity.one_liner}
           </p>
+          <Badges idea={idea} rescoring={rescoring} />
         </div>
         <Score value={idea.composite_score} />
       </header>
@@ -87,7 +179,14 @@ export function IdeaCard({ idea }: { idea: IdeaView }) {
           <span>{opportunity.industry}</span>
           <span className="uppercase">{opportunity.business_model}</span>
           {idea.version > 1 && <span className="font-mono">v{idea.version}</span>}
-          <CollapsibleTrigger className="hover:text-foreground ml-auto flex items-center gap-1">
+          {onOpen && (
+            <Button size="xs" variant="outline" className="ml-auto" onClick={onOpen}>
+              <MessagesSquare aria-hidden /> Co-work
+            </Button>
+          )}
+          <CollapsibleTrigger
+            className={cn("hover:text-foreground flex items-center gap-1", !onOpen && "ml-auto")}
+          >
             Market
             <ChevronDown
               className={cn("size-3.5 transition-transform", open && "rotate-180")}

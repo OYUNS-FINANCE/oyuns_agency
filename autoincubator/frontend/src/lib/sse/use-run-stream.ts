@@ -56,6 +56,8 @@ export function useRunStream(runId: string, options: UseRunStreamOptions = {}): 
       clearTimeout(refetchTimer);
       refetchTimer = setTimeout(() => {
         void client.invalidateQueries({ queryKey: queryKeys.run(runId) });
+        // An open co-working drawer shows versions and status from its own query.
+        void client.invalidateQueries({ queryKey: queryKeys.ideas(runId) });
       }, tuning.current.refetchDelayMs ?? 250);
     }
 

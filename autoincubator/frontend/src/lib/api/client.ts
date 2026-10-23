@@ -1,13 +1,18 @@
 /** Thin fetch wrapper over the backend API. Every non-2xx becomes an `ApiError`. */
 import type {
+  CoworkMessageList,
   CreateRunRequest,
   CreateRunResponse,
   ErrorBody,
   FounderProfile,
   HealthResponse,
+  IdeaDetail,
+  IdeaView,
+  JobAccepted,
   ProfileResponse,
   RunDetail,
   RunList,
+  SelectResponse,
 } from "./types";
 
 export const API_BASE = "/api/incubator";
@@ -97,4 +102,41 @@ export const api = {
   putProfile: (profile: FounderProfile) =>
     apiFetch<ProfileResponse>(`${API_BASE}/profile`, { method: "PUT", ...jsonBody(profile) }),
   streamUrl: (runId: string) => `${API_BASE}/runs/${encodeURIComponent(runId)}/stream`,
+
+  // Co-working while the run is paused (ADR 0006).
+  getIdea: (runId: string, ideaId: string, signal?: AbortSignal) =>
+    apiFetch<IdeaDetail>(ideaPath(runId, ideaId), { signal }),
+  listMessages: (runId: string, ideaId: string, signal?: AbortSignal) =>
+    apiFetch<CoworkMessageList>(`${ideaPath(runId, ideaId)}/cowork`, { signal }),
+  coworkUrl: (runId: string, ideaId: string) => `${ideaPath(runId, ideaId)}/cowork`,
+  applyVersion: (runId: string, ideaId: string, messageId: string) =>
+    apiFetch<IdeaView>(`${ideaPath(runId, ideaId)}/versions`, {
+      method: "POST",
+      ...jsonBody({ message_id: messageId }),
+    }),
+  rescore: (runId: string, ideaId: string) =>
+    apiFetch<JobAccepted>(`${ideaPath(runId, ideaId)}/rescore`, { method: "POST" }),
+  reject: (runId: string, ideaId: string, reason: string | null) =>
+    apiFetch<IdeaView>(`${ideaPath(runId, ideaId)}/reject`, {
+      method: "POST",
+      ...jsonBody({ reason }),
+    }),
+  merge: (runId: string, ideaIds: readonly string[]) =>
+    apiFetch<JobAccepted>(`${runPath(runId)}/ideas/merge`, {
+      method: "POST",
+      ...jsonBody({ idea_ids: ideaIds }),
+    }),
+  select: (runId: string, ideaId: string) =>
+    apiFetch<SelectResponse>(`${runPath(runId)}/select`, {
+      method: "POST",
+      ...jsonBody({ idea_id: ideaId }),
+    }),
 };
+
+function runPath(runId: string): string {
+  return `${API_BASE}/runs/${encodeURIComponent(runId)}`;
+}
+
+function ideaPath(runId: string, ideaId: string): string {
+  return `${runPath(runId)}/ideas/${encodeURIComponent(ideaId)}`;
+}

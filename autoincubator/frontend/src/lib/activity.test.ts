@@ -8,7 +8,12 @@ describe("buildTimeline", () => {
   it("groups agent events into passes and keeps run markers between them", () => {
     const items = buildTimeline([
       statusEvent(1, "running"),
-      event(2, "agent.started", { node: "scout", iteration: 1, items: null }, "scout"),
+      event(
+        2,
+        "agent.started",
+        { node: "scout", iteration: 1, items: null, idea_id: null },
+        "scout",
+      ),
       event(
         3,
         "agent.tool_call",
@@ -19,11 +24,21 @@ describe("buildTimeline", () => {
       event(
         5,
         "agent.completed",
-        { node: "scout", duration_ms: 1200, summary: { kept: 4 } },
+        { node: "scout", duration_ms: 1200, summary: { kept: 4 }, idea_id: null },
         "scout",
       ),
-      event(6, "agent.started", { node: "analyst", iteration: null, items: 4 }, "analyst"),
-      event(7, "agent.started", { node: "scout", iteration: 2, items: null }, "scout"),
+      event(
+        6,
+        "agent.started",
+        { node: "analyst", iteration: null, items: 4, idea_id: null },
+        "analyst",
+      ),
+      event(
+        7,
+        "agent.started",
+        { node: "scout", iteration: 2, items: null, idea_id: null },
+        "scout",
+      ),
     ]);
     expect(
       items.map((i) => (i.kind === "pass" ? `${i.pass.agent}#${i.pass.pass}` : i.event.type)),
@@ -46,7 +61,12 @@ describe("buildTimeline", () => {
   it("opens a pass for an agent that never announced a start", () => {
     const items = buildTimeline([
       event(1, "agent.thought", { text: "ranking 3 ideas" }, "ranker"),
-      event(2, "agent.completed", { node: "rank", duration_ms: 3, summary: {} }, "ranker"),
+      event(
+        2,
+        "agent.completed",
+        { node: "rank", duration_ms: 3, summary: {}, idea_id: null },
+        "ranker",
+      ),
     ]);
     expect(items).toHaveLength(1);
     expect(items[0]?.kind === "pass" && items[0].pass.completed).toBe(true);

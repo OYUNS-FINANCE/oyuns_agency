@@ -41,14 +41,19 @@ function renderRun(detail: RunDetail | { status: number; body: unknown }, events
 }
 
 const scoutPass = [
-  event(2, "agent.started", { node: "scout", iteration: 1, items: null }, "scout"),
+  event(2, "agent.started", { node: "scout", iteration: 1, items: null, idea_id: null }, "scout"),
   event(
     3,
     "agent.tool_call",
     { tool: "search", query: "cafe paper receipts", result_count: 6, idea_key: null },
     "scout",
   ),
-  event(4, "agent.completed", { node: "scout", duration_ms: 2100, summary: { kept: 3 } }, "scout"),
+  event(
+    4,
+    "agent.completed",
+    { node: "scout", duration_ms: 2100, summary: { kept: 3 }, idea_id: null },
+    "scout",
+  ),
 ];
 
 describe("RunView", () => {

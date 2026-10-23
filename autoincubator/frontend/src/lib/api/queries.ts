@@ -5,13 +5,21 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tansta
 import { EMPTY_EVENT_STORE, type RunEventStore } from "@/lib/run-events";
 
 import { ApiError, api } from "./client";
-import { isTerminal, type CreateRunRequest, type FounderProfile } from "./types";
+import {
+  isTerminal,
+  type CoworkMessageList,
+  type CreateRunRequest,
+  type FounderProfile,
+} from "./types";
 
 export const queryKeys = {
   runs: ["runs"] as const,
   runList: (limit: number, offset: number) => ["runs", "list", { limit, offset }] as const,
   run: (runId: string) => ["runs", "detail", runId] as const,
   runEvents: (runId: string) => ["runs", "events", runId] as const,
+  ideas: (runId: string) => ["runs", "ideas", runId] as const,
+  idea: (runId: string, ideaId: string) => ["runs", "ideas", runId, ideaId] as const,
+  messages: (runId: string, ideaId: string) => ["runs", "ideas", runId, ideaId, "cowork"] as const,
   profile: ["profile"] as const,
 };
 
@@ -89,4 +97,78 @@ export function useSaveProfile() {
     mutationFn: (profile: FounderProfile) => api.putProfile(profile),
     onSuccess: (saved) => client.setQueryData(queryKeys.profile, saved),
   });
+}
+
+// --- Co-working (ADR 0006) --------------------------------------------------------------
+
+export function useIdea(runId: string, ideaId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.idea(runId, ideaId ?? ""),
+    queryFn: ({ signal }) => api.getIdea(runId, ideaId ?? "", signal),
+    enabled: ideaId !== null,
+    retry: retryTransient,
+  });
+}
+
+export function useCoworkMessages(runId: string, ideaId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.messages(runId, ideaId ?? ""),
+    queryFn: ({ signal }) => api.listMessages(runId, ideaId ?? "", signal),
+    enabled: ideaId !== null,
+    retry: retryTransient,
+    // A reply generated for another tab (or before a reload) has no stream here: poll
+    // until it is stored.
+    refetchInterval: (query) =>
+      query.state.data?.items.some((m) => m.state === "pending") ? 2_000 : false,
+  });
+}
+
+/** Refreshes the run detail (cards) and the open idea after a co-working write. */
+function invalidateIdeas(client: QueryClient, runId: string) {
+  void client.invalidateQueries({ queryKey: queryKeys.run(runId) });
+  void client.invalidateQueries({ queryKey: queryKeys.ideas(runId) });
+}
+
+export function useApplyVersion(runId: string, ideaId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (messageId: string) => api.applyVersion(runId, ideaId, messageId),
+    onSettled: () => invalidateIdeas(client, runId),
+  });
+}
+
+export function useRescore(runId: string) {
+  return useMutation({ mutationFn: (ideaId: string) => api.rescore(runId, ideaId) });
+}
+
+export function useReject(runId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ideaId, reason }: { ideaId: string; reason: string | null }) =>
+      api.reject(runId, ideaId, reason),
+    onSettled: () => invalidateIdeas(client, runId),
+  });
+}
+
+export function useMerge(runId: string) {
+  return useMutation({ mutationFn: (ideaIds: readonly string[]) => api.merge(runId, ideaIds) });
+}
+
+export function useSelectIdea(runId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (ideaId: string) => api.select(runId, ideaId),
+    onSettled: () => invalidateIdeas(client, runId),
+  });
+}
+
+export function setMessages(
+  client: QueryClient,
+  runId: string,
+  ideaId: string,
+  update: (items: CoworkMessageList["items"]) => CoworkMessageList["items"],
+) {
+  client.setQueryData<CoworkMessageList>(queryKeys.messages(runId, ideaId), (list) => ({
+    items: update(list?.items ?? []),
+  }));
 }

@@ -2,8 +2,12 @@
 
 import {
   CircleAlert,
+  CircleCheck,
   CirclePause,
+  GitMerge,
   Lightbulb,
+  Loader2,
+  Rocket,
   SearchX,
   TriangleAlert,
   WalletCards,
@@ -15,12 +19,17 @@ import { useMemo, useState, type ReactNode } from "react";
 
 import { Segmented } from "@/components/common/segmented";
 import { EmptyState, ErrorState } from "@/components/common/states";
+import { CoworkDrawer } from "@/components/cowork/cowork-drawer";
+import { MergeDialog } from "@/components/cowork/dialogs";
 import { IdeaCard, IdeaCardPending, IdeaCardSkeleton } from "@/components/ideas/idea-card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/client";
-import { useRun, useRunEvents } from "@/lib/api/queries";
+import { useMerge, useRun, useRunEvents } from "@/lib/api/queries";
 import { isTerminal, type BudgetUsage, type RunDetail } from "@/lib/api/types";
 import { announcedIdeas } from "@/lib/activity";
+import { inFlight, type InFlight } from "@/lib/cowork";
+import { useCoworkParams } from "@/lib/use-cowork-params";
 import { describeError, formatDateTime, formatInteger, formatUsd } from "@/lib/format";
 import type { ConnectionStatus } from "@/lib/sse/run-stream";
 import { useRunStream, type RunStreamState } from "@/lib/sse/use-run-stream";
@@ -136,8 +145,17 @@ function Banner({
   );
 }
 
-function RunBanners({ run, stream }: { run: RunDetail; stream: RunStreamState }) {
+function RunBanners({
+  run,
+  stream,
+  flight,
+}: {
+  run: RunDetail;
+  stream: RunStreamState;
+  flight: InFlight;
+}) {
   const banners: ReactNode[] = [];
+  const selected = run.ideas.find((i) => i.id === run.selected_idea_id);
   if (stream.status === "reconnecting" && !isTerminal(run.status)) {
     banners.push(
       <Banner key="conn" icon={WifiOff} tone="warn" title="Connection lost — reconnecting…">
@@ -182,10 +200,39 @@ function RunBanners({ run, stream }: { run: RunDetail; stream: RunStreamState })
         tone={run.shortfall ? "warn" : "info"}
         title={`Discovery complete — ${n} ${n === 1 ? "idea is" : "ideas are"} ready for your review`}
       >
-        {run.shortfall}
+        {run.shortfall ? `${run.shortfall} ` : ""}
+        Co-work with the agents on any idea, merge or reject ideas, then choose one to develop into
+        a full business plan.
       </Banner>,
     );
-  } else if (run.status === "running" && run.budget.max_tokens > 0) {
+    if (flight.merges > 0) {
+      banners.push(
+        <Banner key="merging" icon={GitMerge} tone="info" title="Merging ideas…">
+          The Trend Scout is combining them; the Analyst and the Devil&apos;s Advocate then score
+          the hybrid. Follow it in the activity panel.
+        </Banner>,
+      );
+    }
+  } else if (run.status === "running" && selected) {
+    banners.push(
+      <Banner key="developing" icon={Rocket} tone="info" title={`Developing “${selected.title}”`}>
+        The run resumed from the checkpoint with this idea at v{selected.version}.
+      </Banner>,
+    );
+  } else if (run.status === "completed" && selected) {
+    banners.push(
+      <Banner
+        key="done"
+        icon={CircleCheck}
+        tone="info"
+        title={`Run complete — “${selected.title}”`}
+      >
+        Phase 2 ran with placeholder steps: the business-plan agents are not built yet, so there is
+        no dossier to show.
+      </Banner>,
+    );
+  }
+  if (run.status === "running" && run.budget.max_tokens > 0) {
     const tokenPct = run.budget.tokens_used / run.budget.max_tokens;
     const searchPct = run.budget.searches_used / Math.max(1, run.budget.max_searches);
     if (Math.max(tokenPct, searchPct) >= 0.8) {
@@ -199,7 +246,23 @@ function RunBanners({ run, stream }: { run: RunDetail; stream: RunStreamState })
   return banners.length > 0 ? <div className="flex flex-col gap-2">{banners}</div> : null;
 }
 
-function IdeaList({ run, events }: { run: RunDetail; events: ReturnType<typeof useRunEvents> }) {
+interface CardContext {
+  selecting: boolean;
+  chosen: ReadonlySet<string>;
+  toggle: (ideaId: string, selected: boolean) => void;
+  open: (ideaId: string) => void;
+  flight: InFlight;
+}
+
+function IdeaList({
+  run,
+  events,
+  cards,
+}: {
+  run: RunDetail;
+  events: ReturnType<typeof useRunEvents>;
+  cards: CardContext;
+}) {
   const announced = useMemo(() => announcedIdeas(events.events), [events.events]);
   const known = new Set(run.ideas.map((i) => i.id));
   const pending = announced.filter((i) => !known.has(i.idea_id));
@@ -231,7 +294,16 @@ function IdeaList({ run, events }: { run: RunDetail; events: ReturnType<typeof u
     <ol className="flex flex-col gap-3">
       {ideas.map((idea) => (
         <li key={idea.id}>
-          <IdeaCard idea={idea} />
+          <IdeaCard
+            idea={idea}
+            actions={{
+              onOpen: () => cards.open(idea.id),
+              selectable: cards.selecting && idea.status === "active",
+              selected: cards.chosen.has(idea.id),
+              onSelectedChange: (selected) => cards.toggle(idea.id, selected),
+              rescoring: cards.flight.rescoring.has(idea.id),
+            }}
+          />
         </li>
       ))}
       {pending.map((idea) => (
@@ -264,6 +336,74 @@ function RunViewSkeleton() {
   );
 }
 
+const MERGE_MIN = 2;
+const MERGE_MAX = 4;
+
+function MergeBar({
+  run,
+  selecting,
+  chosen,
+  onStart,
+  onCancel,
+  onMerged,
+  busy,
+}: {
+  run: RunDetail;
+  selecting: boolean;
+  chosen: ReadonlySet<string>;
+  onStart: () => void;
+  onCancel: () => void;
+  onMerged: () => void;
+  busy: boolean;
+}) {
+  const merge = useMerge(run.id);
+  const [confirm, setConfirm] = useState(false);
+  const active = run.ideas.filter((i) => i.status === "active");
+  if (run.status !== "awaiting_human" || active.length < MERGE_MIN) return null;
+  const titles = run.ideas.filter((i) => chosen.has(i.id)).map((i) => i.title);
+  const ready = chosen.size >= MERGE_MIN && chosen.size <= MERGE_MAX;
+
+  if (!selecting) {
+    return (
+      <Button size="sm" variant="outline" onClick={onStart} disabled={busy} className="self-start">
+        {busy ? <Loader2 className="animate-spin" aria-hidden /> : <GitMerge aria-hidden />}
+        {busy ? "Merging…" : "Merge ideas"}
+      </Button>
+    );
+  }
+  return (
+    <div className="bg-card sticky top-16 z-10 flex flex-wrap items-center gap-2 rounded-lg border p-2 text-sm shadow-xs">
+      <span className="text-muted-foreground px-1">
+        {chosen.size === 0
+          ? `Select ${MERGE_MIN}–${MERGE_MAX} ideas to merge`
+          : `${chosen.size} selected`}
+      </span>
+      <Button size="sm" className="ml-auto" disabled={!ready} onClick={() => setConfirm(true)}>
+        <GitMerge aria-hidden /> Merge {chosen.size > 0 ? chosen.size : ""}
+      </Button>
+      <Button size="sm" variant="ghost" onClick={onCancel}>
+        Cancel
+      </Button>
+      <MergeDialog
+        open={confirm}
+        onOpenChange={setConfirm}
+        titles={titles}
+        pending={merge.isPending}
+        error={merge.error}
+        onConfirm={() => {
+          if (merge.isPending) return;
+          merge.mutate([...chosen], {
+            onSuccess: () => {
+              setConfirm(false);
+              onMerged();
+            },
+          });
+        }}
+      />
+    </div>
+  );
+}
+
 type Pane = "activity" | "ideas";
 
 export function RunView({ runId }: { runId: string }) {
@@ -272,6 +412,10 @@ export function RunView({ runId }: { runId: string }) {
   const stream = useRunStream(runId, { enabled: !notFound });
   const events = useRunEvents(runId);
   const [pane, setPane] = useState<Pane | null>(null);
+  const cowork = useCoworkParams();
+  const flight = useMemo(() => inFlight(events.events), [events.events]);
+  const [selecting, setSelecting] = useState(false);
+  const [chosen, setChosen] = useState<ReadonlySet<string>>(new Set());
 
   if (run.isPending) return <RunViewSkeleton />;
   if (run.isError) {
@@ -293,6 +437,11 @@ export function RunView({ runId }: { runId: string }) {
   }
 
   const detail = run.data;
+  const paused = detail.status === "awaiting_human";
+  function stopSelecting() {
+    setSelecting(false);
+    setChosen(new Set());
+  }
   const ideaCount = Math.max(detail.ideas.length, announcedIdeas(events.events).length);
   // On narrow screens show one pane at a time; jump to Ideas once there are some.
   const activePane: Pane = pane ?? (ideaCount > 0 ? "ideas" : "activity");
@@ -314,7 +463,7 @@ export function RunView({ runId }: { runId: string }) {
         <BudgetMeter budget={detail.budget} />
       </header>
 
-      <RunBanners run={detail} stream={stream} />
+      <RunBanners run={detail} stream={stream} flight={flight} />
 
       <Segmented
         label="Panel"
@@ -346,9 +495,35 @@ export function RunView({ runId }: { runId: string }) {
           >
             <Lightbulb className="size-3.5" aria-hidden /> Ranked ideas
           </h2>
-          <IdeaList run={detail} events={events} />
+          <MergeBar
+            run={detail}
+            selecting={selecting && paused}
+            chosen={chosen}
+            busy={flight.merges > 0}
+            onStart={() => setSelecting(true)}
+            onCancel={stopSelecting}
+            onMerged={stopSelecting}
+          />
+          <IdeaList
+            run={detail}
+            events={events}
+            cards={{
+              selecting: selecting && paused,
+              chosen,
+              toggle: (id, on) =>
+                setChosen((prev) => {
+                  const next = new Set(prev);
+                  if (on) next.add(id);
+                  else next.delete(id);
+                  return next;
+                }),
+              open: (id) => cowork.open(id),
+              flight,
+            }}
+          />
         </section>
       </div>
+      <CoworkDrawer run={detail} params={cowork} rescoring={flight.rescoring} />
     </div>
   );
 }

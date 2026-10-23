@@ -14,6 +14,7 @@ from app.db.session import create_engine, create_sessionmaker
 from app.events.broker import EventBroker
 from app.events.schema import EVENT_ADAPTER
 from app.services.cowork_chat import ChatTasks
+from app.services.schemas import CoworkDelta, CoworkFailed, CoworkStarted
 
 log = get_logger(__name__)
 
@@ -42,17 +43,24 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         log.info("app.shutdown")
 
 
+CHAT_STREAM_MODELS = (CoworkStarted, CoworkDelta, CoworkFailed)
+"""Payloads of the co-working reply stream; like SSE events, not FastAPI response models."""
+
+
 def _openapi_with_events(app: FastAPI) -> dict[str, Any]:
-    """The default schema plus the SSE `Event` union under components/schemas/Event, which
-    the stream route's `data` field references (SSE items are not FastAPI models)."""
+    """The default schema plus the SSE payloads, which stream routes reference but FastAPI
+    does not collect: the `Event` union (components/schemas/Event) and the chat events."""
     if app.openapi_schema is None:
         schema = get_openapi(title=app.title, version=app.version, routes=app.routes)
-        event = EVENT_ADAPTER.json_schema(
-            mode="serialization", ref_template="#/components/schemas/{model}"
-        )
+        ref = "#/components/schemas/{model}"
         components = schema.setdefault("components", {}).setdefault("schemas", {})
+        event = EVENT_ADAPTER.json_schema(mode="serialization", ref_template=ref)
         components.update(event.pop("$defs"))
         components["Event"] = event
+        for model in CHAT_STREAM_MODELS:
+            model_schema = model.model_json_schema(mode="serialization", ref_template=ref)
+            components.update(model_schema.pop("$defs", {}))
+            components[model.__name__] = model_schema
         app.openapi_schema = schema
     return app.openapi_schema
 

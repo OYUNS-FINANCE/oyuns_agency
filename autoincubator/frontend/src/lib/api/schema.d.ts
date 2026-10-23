@@ -83,6 +83,157 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/incubator/runs/{run_id}/ideas/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge
+         * @description Merges 2-4 active ideas into a hybrid in the worker: Scout synthesis, then Analyst and
+         *     Skeptic. Progress and the new idea (`idea.created`) arrive on the run's stream.
+         */
+        post: operations["merge_api_incubator_runs__run_id__ideas_merge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/incubator/runs/{run_id}/ideas/{idea_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Idea
+         * @description The idea at its latest version plus every version (oldest first), for diffs.
+         */
+        get: operations["get_idea_api_incubator_runs__run_id__ideas__idea_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/incubator/runs/{run_id}/ideas/{idea_id}/cowork": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Cowork Messages
+         * @description The chat on this idea, oldest first. A reply still being generated is `pending`.
+         */
+        get: operations["list_cowork_messages_api_incubator_runs__run_id__ideas__idea_id__cowork_get"];
+        put?: never;
+        /**
+         * Cowork
+         * @description Chat with one agent about this idea; the reply streams back. The agent may propose a
+         *     change (`proposed_patch` on the completed message), which `POST …/versions` applies.
+         *     The reply is stored even if this connection drops.
+         */
+        post: operations["cowork_api_incubator_runs__run_id__ideas__idea_id__cowork_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/incubator/runs/{run_id}/ideas/{idea_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject
+         * @description Rejects the idea. The reason is kept in the founder profile, so the next Mode B runs
+         *     steer away from it.
+         */
+        post: operations["reject_api_incubator_runs__run_id__ideas__idea_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/incubator/runs/{run_id}/ideas/{idea_id}/rescore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rescore
+         * @description The Skeptic re-scores the latest version in the worker; `agent.*` and `idea.updated`
+         *     arrive on the run's stream.
+         */
+        post: operations["rescore_api_incubator_runs__run_id__ideas__idea_id__rescore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/incubator/runs/{run_id}/ideas/{idea_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply Version
+         * @description Applies an agent's proposed patch as the idea's next version (201). The same proposal
+         *     applied again returns that version (200). The score is then stale until re-scored.
+         */
+        post: operations["apply_version_api_incubator_runs__run_id__ideas__idea_id__versions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/incubator/runs/{run_id}/select": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Select
+         * @description Selects the idea to develop and resumes the graph into Phase 2. Idempotent: repeating
+         *     the same selection returns 202 without resuming again; another idea is a 409.
+         */
+        post: operations["select_api_incubator_runs__run_id__select_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/incubator/runs/{run_id}/stream": {
         parameters: {
             query?: never;
@@ -116,6 +267,11 @@ export interface components {
         AgentCompleted: {
             /** Duration Ms */
             duration_ms: number;
+            /**
+             * Idea Id
+             * @default null
+             */
+            idea_id: string | null;
             /** Node */
             node: string;
             /** Summary */
@@ -151,6 +307,12 @@ export interface components {
         };
         /** AgentStarted */
         AgentStarted: {
+            /**
+             * Idea Id
+             * @description Set for co-working work on one idea (re-score, merge).
+             * @default null
+             */
+            idea_id: string | null;
             /**
              * Items
              * @description Ideas this node will work on.
@@ -268,6 +430,14 @@ export interface components {
              */
             type: "agent.tool_call";
         };
+        /** ApplyVersionRequest */
+        ApplyVersionRequest: {
+            /**
+             * Message Id
+             * Format: uuid
+             */
+            message_id: string;
+        };
         /** BudgetExhausted */
         BudgetExhausted: {
             /**
@@ -376,6 +546,94 @@ export interface components {
             price?: components["schemas"]["SourcedFigure"] | null;
             /** Url */
             url?: string | null;
+        };
+        /**
+         * CoworkDelta
+         * @description `event: delta`: more reply text. `event: reset` (empty object) means discard the text
+         *     so far: the model is retrying after invalid output.
+         */
+        CoworkDelta: {
+            /** Text */
+            text: string;
+        };
+        /**
+         * CoworkFailed
+         * @description `event: error`; the stored assistant message is marked failed.
+         */
+        CoworkFailed: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
+        /** CoworkMessageList */
+        CoworkMessageList: {
+            /** Items */
+            items: components["schemas"]["CoworkMessageView"][];
+        };
+        /** CoworkMessageView */
+        CoworkMessageView: {
+            /**
+             * Agent
+             * @enum {string}
+             */
+            agent: "scout" | "analyst" | "skeptic";
+            /**
+             * Applied Version
+             * @description The version this proposal became, if any.
+             */
+            applied_version: number | null;
+            /** Based On Version */
+            based_on_version: number;
+            /** Content */
+            content: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error */
+            error: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Idea Id
+             * Format: uuid
+             */
+            idea_id: string;
+            /** Proposed Patch */
+            proposed_patch: components["schemas"]["PatchOperation"][] | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant";
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "pending" | "complete" | "failed";
+        };
+        /** CoworkRequest */
+        CoworkRequest: {
+            /**
+             * Agent
+             * @enum {string}
+             */
+            agent: "scout" | "analyst" | "skeptic";
+            /** Content */
+            content: string;
+        };
+        /**
+         * CoworkStarted
+         * @description First SSE event of a chat reply (`event: started`).
+         */
+        CoworkStarted: {
+            assistant_message: components["schemas"]["CoworkMessageView"];
+            user_message: components["schemas"]["CoworkMessageView"];
         };
         /** CreateRunRequest */
         CreateRunRequest: {
@@ -510,12 +768,21 @@ export interface components {
              */
             type: "idea.created";
         };
+        /** IdeaDetail */
+        IdeaDetail: {
+            idea: components["schemas"]["IdeaView"];
+            /** Versions */
+            versions: components["schemas"]["IdeaVersionView"][];
+        };
         /**
          * IdeaStatus
          * @enum {string}
          */
         IdeaStatus: "active" | "rejected" | "merged" | "selected";
-        /** IdeaUpdated */
+        /**
+         * IdeaUpdated
+         * @description A new version (applied patch, re-score) or a status change (rejected, selected).
+         */
         IdeaUpdated: {
             /**
              * Composite Score
@@ -527,6 +794,10 @@ export interface components {
              * Format: uuid
              */
             idea_id: string;
+            /** @default null */
+            source: components["schemas"]["IdeaVersionSource"] | null;
+            /** @default null */
+            status: components["schemas"]["IdeaStatus"] | null;
             /** Version */
             version: number;
         };
@@ -561,6 +832,26 @@ export interface components {
          * @enum {string}
          */
         IdeaVersionSource: "agent" | "cowork" | "merge" | "rescore";
+        /** IdeaVersionView */
+        IdeaVersionView: {
+            analysis: components["schemas"]["MarketAnalysis"];
+            /** Composite Score */
+            composite_score: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            critique: components["schemas"]["CritiqueScorecard"];
+            /** Message Id */
+            message_id: string | null;
+            opportunity: components["schemas"]["RawOpportunity"];
+            /** Patch */
+            patch: components["schemas"]["PatchOperation"][] | null;
+            source: components["schemas"]["IdeaVersionSource"];
+            /** Version */
+            version: number;
+        };
         /** IdeaView */
         IdeaView: {
             analysis: components["schemas"]["MarketAnalysis"];
@@ -574,15 +865,32 @@ export interface components {
             id: string;
             /** Key */
             key: string;
+            /** Merged From */
+            merged_from: string[];
             opportunity: components["schemas"]["RawOpportunity"];
             /** Rank */
             rank: number | null;
+            /** Reject Reason */
+            reject_reason: string | null;
+            /**
+             * Score Stale
+             * @description The idea was edited after it was last scored; re-score to update it.
+             */
+            score_stale: boolean;
             status: components["schemas"]["IdeaStatus"];
             /** Title */
             title: string;
             /** Version */
             version: number;
             version_source: components["schemas"]["IdeaVersionSource"];
+        };
+        /**
+         * JobAccepted
+         * @description Work queued in the worker; progress and the result arrive on the run's stream.
+         */
+        JobAccepted: {
+            /** Job Id */
+            job_id: string;
         };
         /** MarketAnalysis */
         MarketAnalysis: {
@@ -610,6 +918,26 @@ export interface components {
             sam: components["schemas"]["SourcedFigure"];
             som: components["schemas"]["SourcedFigure"];
             tam: components["schemas"]["SourcedFigure"];
+        };
+        /** MergeRequest */
+        MergeRequest: {
+            /** Idea Ids */
+            idea_ids: string[];
+        };
+        /** PatchOperation */
+        PatchOperation: {
+            /**
+             * Op
+             * @enum {string}
+             */
+            op: "add" | "replace" | "remove";
+            /** Path */
+            path: string;
+            /**
+             * Value
+             * @default null
+             */
+            value: unknown;
         };
         /** PricingBenchmark */
         PricingBenchmark: {
@@ -669,6 +997,11 @@ export interface components {
             target_customer: string;
             /** Title */
             title: string;
+        };
+        /** RejectRequest */
+        RejectRequest: {
+            /** Reason */
+            reason?: string | null;
         };
         /**
          * RubricScore
@@ -762,6 +1095,8 @@ export interface components {
             mode: "seeded" | "autonomous";
             /** Seed */
             seed: string | null;
+            /** Selected Idea Id */
+            selected_idea_id: string | null;
             /** Shortfall */
             shortfall: string | null;
             /** Started At */
@@ -984,6 +1319,28 @@ export interface components {
             updated_at: string;
             /** Viable Count */
             viable_count: number | null;
+        };
+        /** SelectRequest */
+        SelectRequest: {
+            /**
+             * Idea Id
+             * Format: uuid
+             */
+            idea_id: string;
+        };
+        /** SelectResponse */
+        SelectResponse: {
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /**
+             * Selected Idea Id
+             * Format: uuid
+             */
+            selected_idea_id: string;
+            status: components["schemas"]["RunStatus"];
         };
         /** SignalSource */
         SignalSource: {
@@ -1234,6 +1591,406 @@ export interface operations {
             };
             /** @description Not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    merge_api_incubator_runs__run_id__ideas_merge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAccepted"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflicts with the run's current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_idea_api_incubator_runs__run_id__ideas__idea_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+                idea_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdeaDetail"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_cowork_messages_api_incubator_runs__run_id__ideas__idea_id__cowork_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+                idea_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoworkMessageList"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cowork_api_incubator_runs__run_id__ideas__idea_id__cowork_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+                idea_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoworkRequest"];
+            };
+        };
+        responses: {
+            /** @description SSE. `started` (CoworkStarted), then `delta` (CoworkDelta) events with reply text, `reset` when a retry discards the text so far, and finally `completed` (CoworkMessageView) or `error` (CoworkFailed). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflicts with the run's current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reject_api_incubator_runs__run_id__ideas__idea_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+                idea_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdeaView"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflicts with the run's current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    rescore_api_incubator_runs__run_id__ideas__idea_id__rescore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+                idea_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAccepted"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflicts with the run's current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    apply_version_api_incubator_runs__run_id__ideas__idea_id__versions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+                idea_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdeaView"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflicts with the run's current state */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    select_api_incubator_runs__run_id__select_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SelectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SelectResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflicts with the run's current state */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

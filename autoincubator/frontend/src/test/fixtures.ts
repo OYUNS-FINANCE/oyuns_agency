@@ -1,5 +1,15 @@
 /** Typed builders for API payloads and SSE events used across tests. */
-import type { EventOf, IdeaView, RunDetail, RunEvent, RunEventType } from "@/lib/api/types";
+import { vi } from "vitest";
+
+import type {
+  CoworkMessage,
+  EventOf,
+  IdeaVersionView,
+  IdeaView,
+  RunDetail,
+  RunEvent,
+  RunEventType,
+} from "@/lib/api/types";
 
 export const RUN_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -33,6 +43,9 @@ export function idea(overrides: Partial<IdeaView> = {}): IdeaView {
     composite_score: 7.4,
     version: 1,
     version_source: "agent",
+    score_stale: false,
+    merged_from: [],
+    reject_reason: null,
     title: "Receipt-to-ledger for cafés",
     opportunity: {
       id: "opp-01",
@@ -105,6 +118,7 @@ export function runDetail(overrides: Partial<RunDetail> = {}): RunDetail {
       constraints: { business_model: "any", solo_founder: false },
     },
     shortfall: null,
+    selected_idea_id: null,
     budget: {
       max_tokens: 1_000_000,
       tokens_used: 1_000,
@@ -149,4 +163,73 @@ export function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: { "content-type": "application/json" },
   });
+}
+
+export const IDEA_ID = "22222222-2222-4222-8222-222222222222";
+
+export function version(
+  n: number,
+  overrides: Partial<IdeaVersionView> = {},
+  base: IdeaView = idea(),
+): IdeaVersionView {
+  return {
+    version: n,
+    source: n === 1 ? "agent" : "cowork",
+    created_at: `2026-10-23T10:0${n}:00Z`,
+    composite_score: base.composite_score ?? 7,
+    opportunity: base.opportunity,
+    analysis: base.analysis,
+    critique: base.critique,
+    patch: null,
+    message_id: null,
+    ...overrides,
+  };
+}
+
+export function message(overrides: Partial<CoworkMessage> = {}): CoworkMessage {
+  return {
+    id: "33333333-3333-4333-8333-333333333333",
+    idea_id: IDEA_ID,
+    agent: "analyst",
+    role: "assistant",
+    state: "complete",
+    content: "A reply.",
+    proposed_patch: null,
+    based_on_version: 1,
+    applied_version: null,
+    error: null,
+    created_at: "2026-10-23T10:05:00Z",
+    ...overrides,
+  };
+}
+
+/** Encodes named SSE events (the co-working reply stream). */
+export function namedSse(events: readonly { event: string; data: unknown }[]): string {
+  return events.map((e) => `event: ${e.event}\ndata: ${JSON.stringify(e.data)}\n\n`).join("");
+}
+
+type Handler = (init: RequestInit | undefined, url: string) => Response | Promise<Response>;
+
+/**
+ * A `fetch` stub that routes on "METHOD /path" (the path without the query string), e.g.
+ * `"POST /ideas/abc/versions"` matches any URL ending in that path. Unmatched calls fail the
+ * test loudly. Every call is recorded.
+ */
+export function routeFetch(routes: Record<string, Handler>) {
+  const calls: { method: string; url: string; body: unknown }[] = [];
+  const fetch = vi.fn(async (input: string, init?: RequestInit) => {
+    const method = (init?.method ?? "GET").toUpperCase();
+    const path = input.split("?")[0]!;
+    const body = typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : null;
+    calls.push({ method, url: input, body });
+    const match = Object.entries(routes)
+      .filter(([key]) => {
+        const [m, suffix] = key.split(" ");
+        return m === method && path.endsWith(suffix!);
+      })
+      .sort(([a], [b]) => b.length - a.length)[0];
+    if (!match) throw new Error(`unexpected fetch: ${method} ${input}`);
+    return match[1](init, input);
+  });
+  return { fetch, calls };
 }

@@ -18,6 +18,22 @@ export type RunConstraints = Schemas["RunConstraints"];
 export type BusinessModel = NonNullable<RunConstraints["business_model"]>;
 
 export type IdeaView = Schemas["IdeaView"];
+export type IdeaStatus = IdeaView["status"];
+export type IdeaVersionSource = IdeaView["version_source"];
+export type IdeaDetail = Schemas["IdeaDetail"];
+export type IdeaVersionView = Schemas["IdeaVersionView"];
+export type PatchOperation = Schemas["PatchOperation"];
+export type SourcedFigure = IdeaView["analysis"]["sizing"]["tam"];
+
+export type CoworkAgent = Schemas["CoworkRequest"]["agent"];
+export type CoworkRequest = Schemas["CoworkRequest"];
+export type CoworkMessage = Schemas["CoworkMessageView"];
+export type CoworkMessageList = Schemas["CoworkMessageList"];
+export type CoworkStarted = Schemas["CoworkStarted"];
+export type CoworkDelta = Schemas["CoworkDelta"];
+export type CoworkFailed = Schemas["CoworkFailed"];
+export type JobAccepted = Schemas["JobAccepted"];
+export type SelectResponse = Schemas["SelectResponse"];
 export type RubricScore = Schemas["RubricScore"];
 export type RubricDimension = RubricScore["dimension"];
 
