@@ -2,13 +2,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { HealthStatus } from "./health-status";
+import { HealthDot } from "./health-dot";
 
 function renderWithClient() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <HealthStatus />
+      <HealthDot />
     </QueryClientProvider>,
   );
 }
@@ -20,27 +20,26 @@ function mockFetch(status: number, body: unknown) {
   );
 }
 
-describe("HealthStatus", () => {
+describe("HealthDot", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("shows ok for every service when healthy", async () => {
+  it("is healthy when every dependency is ok", async () => {
     mockFetch(200, { db: "ok", redis: "ok" });
     renderWithClient();
-    expect(await screen.findAllByText("ok")).toHaveLength(2);
+    expect(await screen.findByRole("img", { name: "API healthy" })).toBeInTheDocument();
   });
 
-  it("shows the failing service on a 503", async () => {
-    mockFetch(503, { db: "error", redis: "ok" });
+  it("names the failing dependency on a 503", async () => {
+    mockFetch(503, { db: "ok", redis: "error" });
     renderWithClient();
-    expect(await screen.findByText("error")).toBeInTheDocument();
-    expect(screen.getByText("ok")).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: /degraded.*Redis error/ })).toBeInTheDocument();
   });
 
-  it("shows an error when the API is unreachable", async () => {
+  it("is unreachable when the API returns garbage", async () => {
     mockFetch(502, { detail: "bad gateway" });
     renderWithClient();
-    expect(await screen.findByRole("alert")).toHaveTextContent("HTTP 502");
+    expect(await screen.findByRole("img", { name: "API unreachable" })).toBeInTheDocument();
   });
 });
