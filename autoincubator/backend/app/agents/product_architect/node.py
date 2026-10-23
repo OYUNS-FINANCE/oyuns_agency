@@ -18,7 +18,7 @@ from app.agents.product_architect.schemas import ProductPlan
 from app.events.schema import AgentCompleted, AgentStarted
 from app.graph.deps import GraphDeps
 from app.graph.state import Phase1State
-from app.services.plan_trace import brief_registry, product_registry
+from app.services.plan_trace import known_brief_numbers, product_registry
 
 AGENT = "product_architect"
 _NAMES = frozenset({"name", "choice", "layer", "fields"})
@@ -29,7 +29,7 @@ async def product_architect_node(state: Phase1State, runtime: Runtime[GraphDeps]
     brief = selected_brief(state)
     started = time.monotonic()
     await deps.events.emit(AgentStarted(node=AGENT, items=1), agent=AGENT)
-    known = brief_registry(brief)
+    known = known_brief_numbers(brief)
 
     def check(out: ProductPlan) -> None:
         check_numbers(out, known.extend(product_registry(out)), _NAMES)

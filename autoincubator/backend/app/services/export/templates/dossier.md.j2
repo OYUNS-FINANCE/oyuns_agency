@@ -1,0 +1,257 @@
+{% set opp = plan.brief.opportunity %}
+{% set analysis = plan.brief.analysis %}
+{% set critique = plan.brief.critique %}
+# {{ opp.title | inline }}
+
+*Business plan dossier · plan version {{ version }} · generated {{ created }}*
+
+> Every number in this dossier comes from a cited source, a stated assumption, or the studio's financial engine. The appendix lists each one.
+
+## 1. Executive summary
+
+{{ plan.executive_summary | inline }}
+
+{% if plan.contradictions %}
+> **Contradictions were found between sections.** They are listed in section 6, not hidden.
+{% endif %}
+
+## 2. The opportunity
+
+**One-liner.** {{ opp.one_liner | inline }}
+
+**Problem.** {{ opp.problem | inline }}
+
+**Target customer.** {{ opp.target_customer | inline }}
+
+**Industry and model.** {{ opp.industry | inline }}, {{ opp.business_model | upper }}
+
+### Signals
+
+{% for s in opp.signals %}
+- *{{ s.category | label }}*: {{ s.evidence | inline }} ([source]({{ s.url }}))
+{% endfor %}
+
+### Market size
+
+Method: {{ analysis.sizing.method | label }}. {{ analysis.sizing.method_explanation | inline }}
+
+| | Value | Basis |
+|---|---:|---|
+{% for name, f in [("TAM", analysis.sizing.tam), ("SAM", analysis.sizing.sam), ("SOM", analysis.sizing.som)] %}
+| {{ name }} | {{ f.value | money }} ({{ f.unit | cell }}) | {% if f.source_url %}[source]({{ f.source_url }}){% else %}Assumption: {{ f.assumption | cell }}{% endif %} |
+{% endfor %}
+
+{% if analysis.competitors %}
+### Competitors
+
+| Competitor | Positioning | Price |
+|---|---|---:|
+{% for c in analysis.competitors %}
+| {% if c.url %}[{{ c.name | cell }}]({{ c.url }}){% else %}{{ c.name | cell }}{% endif %} | {{ c.positioning | cell }} | {% if c.price %}{{ c.price.value | money }} ({{ c.price.unit | cell }}){% else %}n/a{% endif %} |
+{% endfor %}
+{% endif %}
+
+{{ analysis.summary | inline }}
+
+### The Devil's Advocate's verdict
+
+Composite score **{{ "%.1f" | format(plan.brief.composite_score) }} / 10**. Most likely cause of failure: {{ critique.most_likely_failure_cause | inline }}
+
+| Dimension | Score | Why |
+|---|---:|---|
+{% for s in critique.scores %}
+| {{ s.dimension | label }} | {{ s.score }} | {{ s.justification | cell }} |
+{% endfor %}
+
+## 3. Product
+
+{{ plan.product.mvp_summary | inline }}
+
+### MVP: build now
+
+| Feature | What it does | Estimate (days) |
+|---|---|---:|
+{% for f in mvp %}
+| {{ f.name | cell }} | {{ f.description | cell }} | {{ "%g" | format(f.estimate_days) }} |
+{% endfor %}
+
+The MVP adds up to **{{ "%g" | format(plan.product.mvp_days) }} days** of work; the build estimate is **{{ "%g" | format(plan.product.build_estimate_weeks) }} full-time weeks**. {{ plan.product.build_estimate_basis | inline }}
+
+{% if later %}
+### Later
+
+| Feature | What it does | Estimate (days) |
+|---|---|---:|
+{% for f in later %}
+| {{ f.name | cell }} | {{ f.description | cell }} | {{ "%g" | format(f.estimate_days) }} |
+{% endfor %}
+{% endif %}
+
+### Architecture
+
+{{ plan.product.architecture | inline }}
+
+{% for c in plan.product.components %}
+- **{{ c.name | inline }}**: {{ c.responsibility | inline }}
+{% endfor %}
+
+### Data model
+
+{% for e in plan.product.data_model %}
+- **{{ e.name | inline }}**: {{ e.fields | join(", ") | inline }}{% if e.notes %}. {{ e.notes | inline }}{% endif %}
+
+{% endfor %}
+
+### Stack
+
+| Layer | Choice | Why |
+|---|---|---|
+{% for s in plan.product.stack %}
+| {{ s.layer | cell }} | {{ s.choice | cell }} | {{ s.why | cell }} |
+{% endfor %}
+
+## 4. Go-to-market
+
+**Positioning.** {{ plan.gtm.positioning | inline }}
+
+### Ideal customer
+
+{{ plan.gtm.icp.description | inline }}
+
+- **Who:** {{ plan.gtm.icp.attributes | join("; ") | inline }}
+- **Pains:** {{ plan.gtm.icp.pains | join("; ") | inline }}
+- **Buying trigger:** {{ plan.gtm.icp.buying_trigger | inline }}
+
+### Channels, ranked by expected CAC
+
+| Rank | Channel | Expected CAC | Why |
+|---:|---|---:|---|
+{% for c in plan.gtm.channels %}
+| {{ loop.index }} | {{ c.channel | channel }} | {{ c.expected_cac.value | money }} | {{ c.rationale | cell }} |
+{% endfor %}
+
+### Zero-budget tactics
+
+{% for t in plan.gtm.zero_budget_tactics %}
+- **{{ t.name | inline }}**: {{ t.description | inline }}
+{% endfor %}
+
+{% if plan.gtm.viral_loops %}
+### Viral loops
+
+{% for t in plan.gtm.viral_loops %}
+- **{{ t.name | inline }}**: {{ t.description | inline }}
+{% endfor %}
+{% endif %}
+
+### The first 100 customers
+
+{% for s in plan.gtm.first_100_customers %}
+{{ loop.index }}. **{{ s.step | inline }}**: {{ s.description | inline }}
+{% endfor %}
+
+## 5. Financials
+
+All figures in USD. The engine computes every number below from the assumptions in the appendix; no number is produced by a language model.
+
+### Pricing
+
+| Tier | Price per month | Share of customers |
+|---|---:|---:|
+{% for t in plan.assumptions.price_tiers %}
+| {{ t.name | cell }} | {{ t.price_monthly.value | money }} | {{ t.mix.value | pct }} |
+{% endfor %}
+
+### Unit economics
+
+| Metric | Base | Bear | Bull |
+|---|---:|---:|---:|
+{% for label, values in unit_economics %}
+| {{ label }} | {{ values | join(" | ") }} |
+{% endfor %}
+
+{% for s in scenarios %}
+### 12-month projection: {{ s.scenario }} case
+
+| Month | Signups | New customers | Customers | MRR | Gross profit | Opex | Net cash flow | Cash |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+{% for m in s.months %}
+| {{ m.month }} | {{ m.signups | num }} | {{ m.new_customers | num }} | {{ m.customers | num }} | {{ m.mrr | money }} | {{ m.gross_profit | money }} | {{ m.opex | money }} | {{ m.net_cash_flow | money }} | {{ m.cash | money }} |
+{% endfor %}
+
+Break-even: {{ s.break_even_month | month }}. Cash runs out: {{ s.cash_out_month | month }}. {% if s.runway_after_m12 is not none %}After month 12, cash lasts {{ s.runway_after_m12 | num }} more months at the month-12 burn.{% else %}Not burning cash at month 12.{% endif %}
+
+
+{% endfor %}
+## 6. Contradictions & open questions
+
+{% for c in plan.contradictions %}
+- **{{ c.severity | upper }}** ({{ c.sections | join(", ") }}; {{ "automated check" if c.origin == "check" else "Editor review" }}): {{ c.description | inline }}{% if c.untraced %} Unverified: {% for t in c.untraced %}`{{ t }}`{{ ", " if not loop.last }}{% endfor %}.{% endif %}{% if c.resolution %} *Suggested resolution:* {{ c.resolution | inline }}{% endif %}
+
+{% else %}
+No contradictions were found between the sections.
+{% endfor %}
+
+## 7. Risks
+
+{% for r in plan.risks %}
+- **{{ r.risk | inline }}** Mitigation: {{ r.mitigation | inline }}
+{% endfor %}
+
+## 8. 30/60/90-day launch checklist
+
+{% for title, items in [("By day 30", plan.checklist.day_30), ("By day 60", plan.checklist.day_60), ("By day 90", plan.checklist.day_90)] %}
+### {{ title }}
+
+{% for item in items %}
+- [ ] {{ item | inline }}
+{% endfor %}
+
+{% endfor %}
+## Appendix: Sources & Assumptions
+
+### Sources
+
+{% for url, n in sources %}
+- **S{{ n }}**: <{{ url }}>
+{% else %}
+No sources are cited; every figure is a stated assumption.
+{% endfor %}
+
+### Assumptions and sourced figures
+
+| Section | Figure | Value | Basis |
+|---|---|---:|---|
+{% for r in assumption_rows %}
+| {{ r.section }} | {{ r.label | cell }} | {{ r.value | cell }} | {{ r.basis | cell }} |
+{% endfor %}
+
+### Scenario definitions
+
+Bear and bull apply fixed multipliers to the base assumptions, the same for every plan (fractions are capped at 100%).
+
+| Scenario | CAC | Free-to-paid | Monthly churn | Organic growth |
+|---|---:|---:|---:|---:|
+{% for name, m in multipliers %}
+| {{ name }} | {{ m.cac }}x | {{ m.free_to_paid }}x | {{ m.monthly_churn }}x | {{ m.organic_growth }}x |
+{% endfor %}
+
+### Engine calculations
+
+Every output is computed per scenario by the studio's financial engine (pure Python).
+
+| Output | Formula | Computed from |
+|---|---|---|
+{% for e in engine_rows %}
+| {{ e.output }} | {{ e.formula | cell }} | {{ e.inputs }} |
+{% endfor %}
+{% if check_figures %}
+
+### Consistency-check figures
+
+| Figure | Value | Formula |
+|---|---:|---|
+{% for f in check_figures %}
+| {{ f.label | cell }} | {{ "%g" | format(f.value) }} | {{ f.formula | cell }} |
+{% endfor %}
+{% endif %}

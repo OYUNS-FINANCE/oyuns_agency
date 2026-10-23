@@ -17,6 +17,7 @@ from app.agents.common.schemas import (
     check_seed_for_mode,
 )
 from app.agents.cowork.schemas import CoworkAgentName
+from app.agents.editor.schemas import BusinessPlan
 from app.agents.scout.schemas import RawOpportunity
 from app.agents.skeptic.schemas import CritiqueScorecard
 from app.db.enums import IdeaStatus, IdeaVersionSource, RunStatus
@@ -209,3 +210,18 @@ class SelectResponse(BaseModel):
 class ProfileResponse(BaseModel):
     profile: FounderProfile
     updated_at: datetime | None
+
+
+class EngineFormula(BaseModel):
+    key: str
+    label: str
+    formula: str
+    inputs: list[str] = Field(description="Assumption groups this output depends on.")
+
+
+class PlanResponse(BaseModel):
+    run_id: uuid.UUID
+    version: int
+    created_at: datetime
+    plan: BusinessPlan
+    engine_formulas: list[EngineFormula]

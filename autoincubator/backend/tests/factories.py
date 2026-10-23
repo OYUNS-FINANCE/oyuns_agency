@@ -10,6 +10,7 @@ from langgraph.runtime import Runtime
 from app.agents.analyst.schemas import MarketAnalysis, MarketAnalysisOutput
 from app.agents.common.brief import IdeaBrief
 from app.agents.common.schemas import RunInput
+from app.agents.editor.schemas import BusinessPlan
 from app.agents.financial_modeler.schemas import AssumptionSet
 from app.agents.gtm_strategist.schemas import GtmPlan
 from app.agents.product_architect.schemas import ProductPlan
@@ -274,3 +275,24 @@ def gtm_plan(
             {"step": "Referrals", "description": "Ask for introductions."},
         ],
     })  # fmt: skip
+
+
+async def business_plan(brief: IdeaBrief | None = None, **state: Any) -> BusinessPlan:
+    """A full plan from the four Phase-2 nodes with the offline responder."""
+    from app.agents.editor.node import editor_node
+    from app.agents.financial_modeler.node import financial_modeler_node
+    from app.agents.gtm_strategist.node import gtm_strategist_node
+    from app.agents.product_architect.node import product_architect_node
+
+    d = deps()
+    s: dict[str, Any] = {
+        "run_id": "t-1",
+        "run_input": seeded_input(),
+        "selected_idea_id": "00000000-0000-0000-0000-0000000000aa",
+        "selected_brief": brief or idea_brief(),
+        **state,
+    }
+    for node in (product_architect_node, gtm_strategist_node, financial_modeler_node):
+        s.update(await node(s, runtime(d)))  # type: ignore[arg-type]
+    out = await editor_node(s, runtime(d))  # type: ignore[arg-type]
+    return out["plan"]

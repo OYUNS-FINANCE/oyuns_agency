@@ -343,6 +343,94 @@
         "title": "ApplyVersionRequest",
         "type": "object"
       },
+      "AssumptionSet": {
+        "description": "What the Financial Modeler returns. No derived numbers: the engine computes those.",
+        "properties": {
+          "channels": {
+            "description": "Paid acquisition channels. Empty = no paid acquisition.",
+            "items": {
+              "$ref": "#/components/schemas/ChannelAssumption"
+            },
+            "maxItems": 6,
+            "title": "Channels",
+            "type": "array"
+          },
+          "fixed_costs": {
+            "items": {
+              "$ref": "#/components/schemas/FixedCost"
+            },
+            "maxItems": 10,
+            "title": "Fixed Costs",
+            "type": "array"
+          },
+          "free_to_paid": {
+            "$ref": "#/components/schemas/SourcedFigure",
+            "description": "Share of signups that become paying, 0 to 1."
+          },
+          "launch_month": {
+            "description": "First month with customers (1 = immediately).",
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Launch Month",
+            "type": "integer"
+          },
+          "launch_rationale": {
+            "maxLength": 400,
+            "minLength": 10,
+            "title": "Launch Rationale",
+            "type": "string"
+          },
+          "monthly_churn": {
+            "$ref": "#/components/schemas/SourcedFigure",
+            "description": "Share of paying customers lost per month."
+          },
+          "organic_growth": {
+            "$ref": "#/components/schemas/SourcedFigure",
+            "description": "Monthly growth of free signups, 0 to 1."
+          },
+          "organic_signups_m1": {
+            "$ref": "#/components/schemas/SourcedFigure",
+            "description": "Free signups in the launch month."
+          },
+          "payment_fee_pct": {
+            "$ref": "#/components/schemas/SourcedFigure",
+            "description": "Payment processing share of revenue."
+          },
+          "price_tiers": {
+            "items": {
+              "$ref": "#/components/schemas/PriceTier"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Price Tiers",
+            "type": "array"
+          },
+          "starting_cash": {
+            "$ref": "#/components/schemas/SourcedFigure",
+            "description": "USD available at month 0."
+          },
+          "variable_cost_per_customer": {
+            "$ref": "#/components/schemas/SourcedFigure",
+            "description": "USD per paying customer per month (hosting, support)."
+          }
+        },
+        "required": [
+          "price_tiers",
+          "channels",
+          "organic_signups_m1",
+          "organic_growth",
+          "free_to_paid",
+          "monthly_churn",
+          "payment_fee_pct",
+          "variable_cost_per_customer",
+          "fixed_costs",
+          "starting_cash",
+          "launch_month",
+          "launch_rationale"
+        ],
+        "title": "AssumptionSet",
+        "type": "object"
+      },
       "BudgetExhausted": {
         "properties": {
           "kind": {
@@ -555,6 +643,143 @@
         "title": "BudgetWarningEvent",
         "type": "object"
       },
+      "BusinessPlan": {
+        "properties": {
+          "assumptions": {
+            "$ref": "#/components/schemas/AssumptionSet"
+          },
+          "brief": {
+            "$ref": "#/components/schemas/IdeaBrief"
+          },
+          "checklist": {
+            "$ref": "#/components/schemas/LaunchChecklist"
+          },
+          "contradictions": {
+            "items": {
+              "$ref": "#/components/schemas/Contradiction"
+            },
+            "title": "Contradictions",
+            "type": "array"
+          },
+          "executive_summary": {
+            "title": "Executive Summary",
+            "type": "string"
+          },
+          "financials": {
+            "$ref": "#/components/schemas/FinancialModel"
+          },
+          "gtm": {
+            "$ref": "#/components/schemas/GtmPlan"
+          },
+          "idea_id": {
+            "description": "Application id (`ideas.id`) of the developed idea.",
+            "title": "Idea Id",
+            "type": "string"
+          },
+          "product": {
+            "$ref": "#/components/schemas/ProductPlan"
+          },
+          "risks": {
+            "items": {
+              "$ref": "#/components/schemas/Risk"
+            },
+            "title": "Risks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "idea_id",
+          "brief",
+          "executive_summary",
+          "product",
+          "gtm",
+          "assumptions",
+          "financials",
+          "contradictions",
+          "risks",
+          "checklist"
+        ],
+        "title": "BusinessPlan",
+        "type": "object"
+      },
+      "ChannelAssumption": {
+        "properties": {
+          "cac": {
+            "$ref": "#/components/schemas/SourcedFigure",
+            "description": "USD spent per new paying customer; must be > 0."
+          },
+          "channel": {
+            "description": "Matched against the GTM Strategist's channels.",
+            "enum": [
+              "paid_search",
+              "paid_social",
+              "content_seo",
+              "outbound_email",
+              "partnerships",
+              "marketplace_listing",
+              "community",
+              "referral_program",
+              "events",
+              "influencers",
+              "app_store"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "monthly_spend": {
+            "$ref": "#/components/schemas/SourcedFigure",
+            "description": "USD per month from launch onwards."
+          }
+        },
+        "required": [
+          "channel",
+          "cac",
+          "monthly_spend"
+        ],
+        "title": "ChannelAssumption",
+        "type": "object"
+      },
+      "ChannelEconomics": {
+        "properties": {
+          "cac": {
+            "title": "Cac",
+            "type": "number"
+          },
+          "channel": {
+            "enum": [
+              "paid_search",
+              "paid_social",
+              "content_seo",
+              "outbound_email",
+              "partnerships",
+              "marketplace_listing",
+              "community",
+              "referral_program",
+              "events",
+              "influencers",
+              "app_store"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "monthly_spend": {
+            "title": "Monthly Spend",
+            "type": "number"
+          },
+          "new_customers_per_month": {
+            "title": "New Customers Per Month",
+            "type": "number"
+          }
+        },
+        "required": [
+          "channel",
+          "cac",
+          "monthly_spend",
+          "new_customers_per_month"
+        ],
+        "title": "ChannelEconomics",
+        "type": "object"
+      },
       "Competitor": {
         "properties": {
           "name": {
@@ -596,6 +821,139 @@
           "positioning"
         ],
         "title": "Competitor",
+        "type": "object"
+      },
+      "Component": {
+        "properties": {
+          "name": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "responsibility": {
+            "maxLength": 300,
+            "minLength": 10,
+            "title": "Responsibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "responsibility"
+        ],
+        "title": "Component",
+        "type": "object"
+      },
+      "ComputedFigure": {
+        "description": "A number a consistency check derived; listed with its formula in the appendix.",
+        "properties": {
+          "formula": {
+            "title": "Formula",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "label",
+          "value",
+          "formula"
+        ],
+        "title": "ComputedFigure",
+        "type": "object"
+      },
+      "Contradiction": {
+        "properties": {
+          "code": {
+            "enum": [
+              "channel_cac_mismatch",
+              "channel_missing_in_finance",
+              "channel_missing_in_gtm",
+              "mvp_estimate_mismatch",
+              "launch_before_build",
+              "untraced_number",
+              "editor_review"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "figures": {
+            "items": {
+              "$ref": "#/components/schemas/ComputedFigure"
+            },
+            "title": "Figures",
+            "type": "array"
+          },
+          "origin": {
+            "enum": [
+              "check",
+              "editor"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution"
+          },
+          "sections": {
+            "items": {
+              "enum": [
+                "opportunity",
+                "product",
+                "gtm",
+                "financials",
+                "launch"
+              ],
+              "type": "string"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "severity": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "untraced": {
+            "description": "For untraced_number: the numbers as written.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Untraced",
+            "type": "array"
+          }
+        },
+        "required": [
+          "code",
+          "origin",
+          "severity",
+          "sections",
+          "description"
+        ],
+        "title": "Contradiction",
         "type": "object"
       },
       "CoworkDelta": {
@@ -924,6 +1282,75 @@
         "title": "CustomerSegment",
         "type": "object"
       },
+      "EngineFormula": {
+        "properties": {
+          "formula": {
+            "title": "Formula",
+            "type": "string"
+          },
+          "inputs": {
+            "description": "Assumption groups this output depends on.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Inputs",
+            "type": "array"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "formula",
+          "inputs"
+        ],
+        "title": "EngineFormula",
+        "type": "object"
+      },
+      "Entity": {
+        "properties": {
+          "fields": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 15,
+            "minItems": 1,
+            "title": "Fields",
+            "type": "array"
+          },
+          "name": {
+            "maxLength": 60,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "required": [
+          "name",
+          "fields"
+        ],
+        "title": "Entity",
+        "type": "object"
+      },
       "ErrorBody": {
         "properties": {
           "code": {
@@ -1024,6 +1451,89 @@
           }
         ]
       },
+      "Feature": {
+        "properties": {
+          "description": {
+            "maxLength": 400,
+            "minLength": 10,
+            "title": "Description",
+            "type": "string"
+          },
+          "estimate_days": {
+            "description": "Full-time working days for one developer.",
+            "exclusiveMinimum": 0.0,
+            "maximum": 120.0,
+            "title": "Estimate Days",
+            "type": "number"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          },
+          "scope": {
+            "description": "\"now\" = in the MVP.",
+            "enum": [
+              "now",
+              "later"
+            ],
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "scope",
+          "estimate_days"
+        ],
+        "title": "Feature",
+        "type": "object"
+      },
+      "FinancialModel": {
+        "properties": {
+          "scenarios": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ScenarioResult"
+            },
+            "propertyNames": {
+              "enum": [
+                "base",
+                "bear",
+                "bull"
+              ]
+            },
+            "title": "Scenarios",
+            "type": "object"
+          }
+        },
+        "required": [
+          "scenarios"
+        ],
+        "title": "FinancialModel",
+        "type": "object"
+      },
+      "FixedCost": {
+        "properties": {
+          "monthly": {
+            "$ref": "#/components/schemas/SourcedFigure",
+            "description": "USD per month, from month 1."
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "monthly"
+        ],
+        "title": "FixedCost",
+        "type": "object"
+      },
       "FounderProfile": {
         "properties": {
           "capital_usd": {
@@ -1091,6 +1601,103 @@
         "title": "FounderProfile",
         "type": "object"
       },
+      "GtmChannel": {
+        "properties": {
+          "channel": {
+            "enum": [
+              "paid_search",
+              "paid_social",
+              "content_seo",
+              "outbound_email",
+              "partnerships",
+              "marketplace_listing",
+              "community",
+              "referral_program",
+              "events",
+              "influencers",
+              "app_store"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "expected_cac": {
+            "$ref": "#/components/schemas/SourcedFigure",
+            "description": "USD per new paying customer."
+          },
+          "rationale": {
+            "maxLength": 400,
+            "minLength": 10,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel",
+          "rationale",
+          "expected_cac"
+        ],
+        "title": "GtmChannel",
+        "type": "object"
+      },
+      "GtmPlan": {
+        "properties": {
+          "channels": {
+            "description": "Paid channels, cheapest expected CAC first.",
+            "items": {
+              "$ref": "#/components/schemas/GtmChannel"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Channels",
+            "type": "array"
+          },
+          "first_100_customers": {
+            "items": {
+              "$ref": "#/components/schemas/LaunchStep"
+            },
+            "maxItems": 8,
+            "minItems": 2,
+            "title": "First 100 Customers",
+            "type": "array"
+          },
+          "icp": {
+            "$ref": "#/components/schemas/IdealCustomerProfile"
+          },
+          "positioning": {
+            "maxLength": 600,
+            "minLength": 20,
+            "title": "Positioning",
+            "type": "string"
+          },
+          "viral_loops": {
+            "items": {
+              "$ref": "#/components/schemas/Tactic"
+            },
+            "maxItems": 4,
+            "title": "Viral Loops",
+            "type": "array"
+          },
+          "zero_budget_tactics": {
+            "items": {
+              "$ref": "#/components/schemas/Tactic"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Zero Budget Tactics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "positioning",
+          "icp",
+          "channels",
+          "zero_budget_tactics",
+          "viral_loops",
+          "first_100_customers"
+        ],
+        "title": "GtmPlan",
+        "type": "object"
+      },
       "HealthResponse": {
         "properties": {
           "db": {
@@ -1115,6 +1722,39 @@
           "redis"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "IdeaBrief": {
+        "properties": {
+          "analysis": {
+            "$ref": "#/components/schemas/MarketAnalysis"
+          },
+          "composite_score": {
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Composite Score",
+            "type": "number"
+          },
+          "critique": {
+            "$ref": "#/components/schemas/CritiqueScorecard"
+          },
+          "opportunity": {
+            "$ref": "#/components/schemas/RawOpportunity"
+          },
+          "rank": {
+            "minimum": 1.0,
+            "title": "Rank",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rank",
+          "composite_score",
+          "opportunity",
+          "analysis",
+          "critique"
+        ],
+        "title": "IdeaBrief",
         "type": "object"
       },
       "IdeaCreated": {
@@ -1526,6 +2166,49 @@
         "title": "IdeaView",
         "type": "object"
       },
+      "IdealCustomerProfile": {
+        "properties": {
+          "attributes": {
+            "description": "Who exactly.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Attributes",
+            "type": "array"
+          },
+          "buying_trigger": {
+            "maxLength": 300,
+            "minLength": 5,
+            "title": "Buying Trigger",
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Description",
+            "type": "string"
+          },
+          "pains": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Pains",
+            "type": "array"
+          }
+        },
+        "required": [
+          "description",
+          "attributes",
+          "pains",
+          "buying_trigger"
+        ],
+        "title": "IdealCustomerProfile",
+        "type": "object"
+      },
       "JobAccepted": {
         "description": "Work queued in the worker; progress and the result arrive on the run's stream.",
         "properties": {
@@ -1538,6 +2221,66 @@
           "job_id"
         ],
         "title": "JobAccepted",
+        "type": "object"
+      },
+      "LaunchChecklist": {
+        "properties": {
+          "day_30": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "minItems": 2,
+            "title": "Day 30",
+            "type": "array"
+          },
+          "day_60": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "minItems": 2,
+            "title": "Day 60",
+            "type": "array"
+          },
+          "day_90": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "minItems": 2,
+            "title": "Day 90",
+            "type": "array"
+          }
+        },
+        "required": [
+          "day_30",
+          "day_60",
+          "day_90"
+        ],
+        "title": "LaunchChecklist",
+        "type": "object"
+      },
+      "LaunchStep": {
+        "properties": {
+          "description": {
+            "maxLength": 400,
+            "minLength": 10,
+            "title": "Description",
+            "type": "string"
+          },
+          "step": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Step",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "description"
+        ],
+        "title": "LaunchStep",
         "type": "object"
       },
       "MarketAnalysis": {
@@ -1648,6 +2391,66 @@
         "title": "MergeRequest",
         "type": "object"
       },
+      "MonthRow": {
+        "properties": {
+          "cash": {
+            "title": "Cash",
+            "type": "number"
+          },
+          "cogs": {
+            "title": "Cogs",
+            "type": "number"
+          },
+          "customers": {
+            "title": "Customers",
+            "type": "number"
+          },
+          "gross_profit": {
+            "title": "Gross Profit",
+            "type": "number"
+          },
+          "month": {
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Month",
+            "type": "integer"
+          },
+          "mrr": {
+            "title": "Mrr",
+            "type": "number"
+          },
+          "net_cash_flow": {
+            "title": "Net Cash Flow",
+            "type": "number"
+          },
+          "new_customers": {
+            "title": "New Customers",
+            "type": "number"
+          },
+          "opex": {
+            "title": "Opex",
+            "type": "number"
+          },
+          "signups": {
+            "title": "Signups",
+            "type": "number"
+          }
+        },
+        "required": [
+          "month",
+          "signups",
+          "new_customers",
+          "customers",
+          "mrr",
+          "cogs",
+          "gross_profit",
+          "opex",
+          "net_cash_flow",
+          "cash"
+        ],
+        "title": "MonthRow",
+        "type": "object"
+      },
       "PatchOperation": {
         "properties": {
           "op": {
@@ -1673,6 +2476,68 @@
           "path"
         ],
         "title": "PatchOperation",
+        "type": "object"
+      },
+      "PlanResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "engine_formulas": {
+            "items": {
+              "$ref": "#/components/schemas/EngineFormula"
+            },
+            "title": "Engine Formulas",
+            "type": "array"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/BusinessPlan"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "run_id",
+          "version",
+          "created_at",
+          "plan",
+          "engine_formulas"
+        ],
+        "title": "PlanResponse",
+        "type": "object"
+      },
+      "PriceTier": {
+        "properties": {
+          "mix": {
+            "$ref": "#/components/schemas/SourcedFigure",
+            "description": "Share of paying customers on this tier, 0 to 1."
+          },
+          "name": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "price_monthly": {
+            "$ref": "#/components/schemas/SourcedFigure",
+            "description": "USD per customer per month."
+          }
+        },
+        "required": [
+          "name",
+          "price_monthly",
+          "mix"
+        ],
+        "title": "PriceTier",
         "type": "object"
       },
       "PricingBenchmark": {
@@ -1704,6 +2569,84 @@
           "billing"
         ],
         "title": "PricingBenchmark",
+        "type": "object"
+      },
+      "ProductPlan": {
+        "properties": {
+          "architecture": {
+            "maxLength": 1200,
+            "minLength": 20,
+            "title": "Architecture",
+            "type": "string"
+          },
+          "build_estimate_basis": {
+            "description": "How the estimate was derived.",
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Build Estimate Basis",
+            "type": "string"
+          },
+          "build_estimate_weeks": {
+            "description": "Full-time (40 h) weeks for one developer to ship the MVP.",
+            "exclusiveMinimum": 0.0,
+            "maximum": 52.0,
+            "title": "Build Estimate Weeks",
+            "type": "number"
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/Component"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Components",
+            "type": "array"
+          },
+          "data_model": {
+            "items": {
+              "$ref": "#/components/schemas/Entity"
+            },
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Data Model",
+            "type": "array"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/Feature"
+            },
+            "maxItems": 15,
+            "minItems": 2,
+            "title": "Features",
+            "type": "array"
+          },
+          "mvp_summary": {
+            "maxLength": 800,
+            "minLength": 20,
+            "title": "Mvp Summary",
+            "type": "string"
+          },
+          "stack": {
+            "items": {
+              "$ref": "#/components/schemas/StackChoice"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Stack",
+            "type": "array"
+          }
+        },
+        "required": [
+          "mvp_summary",
+          "features",
+          "architecture",
+          "components",
+          "data_model",
+          "stack",
+          "build_estimate_weeks",
+          "build_estimate_basis"
+        ],
+        "title": "ProductPlan",
         "type": "object"
       },
       "ProfileResponse": {
@@ -1847,6 +2790,28 @@
         "title": "RejectRequest",
         "type": "object"
       },
+      "Risk": {
+        "properties": {
+          "mitigation": {
+            "maxLength": 300,
+            "minLength": 10,
+            "title": "Mitigation",
+            "type": "string"
+          },
+          "risk": {
+            "maxLength": 300,
+            "minLength": 10,
+            "title": "Risk",
+            "type": "string"
+          }
+        },
+        "required": [
+          "risk",
+          "mitigation"
+        ],
+        "title": "Risk",
+        "type": "object"
+      },
       "RubricScore": {
         "description": "1-10 where 10 is always the favourable end (lowest risk / best outlook).",
         "properties": {
@@ -1886,7 +2851,21 @@
         "type": "object"
       },
       "RunCompleted": {
-        "properties": {},
+        "properties": {
+          "plan_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The business plan version written with the completion.",
+            "title": "Plan Version"
+          }
+        },
         "title": "RunCompleted",
         "type": "object"
       },
@@ -2627,6 +3606,115 @@
         "title": "RunSummary",
         "type": "object"
       },
+      "ScenarioMultipliers": {
+        "description": "Applied to the base assumptions. Fractions are capped at 1 afterwards.",
+        "properties": {
+          "cac": {
+            "title": "Cac",
+            "type": "number"
+          },
+          "free_to_paid": {
+            "title": "Free To Paid",
+            "type": "number"
+          },
+          "monthly_churn": {
+            "title": "Monthly Churn",
+            "type": "number"
+          },
+          "organic_growth": {
+            "title": "Organic Growth",
+            "type": "number"
+          }
+        },
+        "required": [
+          "cac",
+          "free_to_paid",
+          "monthly_churn",
+          "organic_growth"
+        ],
+        "title": "ScenarioMultipliers",
+        "type": "object"
+      },
+      "ScenarioResult": {
+        "properties": {
+          "break_even_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Break Even Month"
+          },
+          "cash_out_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cash Out Month"
+          },
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/ChannelEconomics"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "months": {
+            "items": {
+              "$ref": "#/components/schemas/MonthRow"
+            },
+            "maxItems": 12,
+            "minItems": 12,
+            "title": "Months",
+            "type": "array"
+          },
+          "multipliers": {
+            "$ref": "#/components/schemas/ScenarioMultipliers"
+          },
+          "runway_after_m12": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runway After M12"
+          },
+          "scenario": {
+            "enum": [
+              "base",
+              "bear",
+              "bull"
+            ],
+            "title": "Scenario",
+            "type": "string"
+          },
+          "unit_economics": {
+            "$ref": "#/components/schemas/UnitEconomics"
+          }
+        },
+        "required": [
+          "scenario",
+          "multipliers",
+          "unit_economics",
+          "channels",
+          "months",
+          "break_even_month",
+          "cash_out_month",
+          "runway_after_m12"
+        ],
+        "title": "ScenarioResult",
+        "type": "object"
+      },
       "SelectRequest": {
         "properties": {
           "idea_id": {
@@ -2745,6 +3833,122 @@
           "unit"
         ],
         "title": "SourcedFigure",
+        "type": "object"
+      },
+      "StackChoice": {
+        "properties": {
+          "choice": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Choice",
+            "type": "string"
+          },
+          "layer": {
+            "description": "e.g. \"frontend\", \"database\".",
+            "maxLength": 40,
+            "minLength": 2,
+            "title": "Layer",
+            "type": "string"
+          },
+          "why": {
+            "maxLength": 300,
+            "minLength": 10,
+            "title": "Why",
+            "type": "string"
+          }
+        },
+        "required": [
+          "layer",
+          "choice",
+          "why"
+        ],
+        "title": "StackChoice",
+        "type": "object"
+      },
+      "Tactic": {
+        "properties": {
+          "description": {
+            "maxLength": 400,
+            "minLength": 10,
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ],
+        "title": "Tactic",
+        "type": "object"
+      },
+      "UnitEconomics": {
+        "properties": {
+          "arpa": {
+            "title": "Arpa",
+            "type": "number"
+          },
+          "blended_cac": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blended Cac"
+          },
+          "gross_margin_pct": {
+            "title": "Gross Margin Pct",
+            "type": "number"
+          },
+          "ltv": {
+            "title": "Ltv",
+            "type": "number"
+          },
+          "ltv_to_cac": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ltv To Cac"
+          },
+          "payback_months": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payback Months"
+          },
+          "variable_cost_per_customer": {
+            "title": "Variable Cost Per Customer",
+            "type": "number"
+          }
+        },
+        "required": [
+          "arpa",
+          "variable_cost_per_customer",
+          "gross_margin_pct",
+          "blended_cac",
+          "ltv",
+          "ltv_to_cac",
+          "payback_months"
+        ],
+        "title": "UnitEconomics",
         "type": "object"
       }
     }
@@ -3587,6 +4791,143 @@
         "summary": "Apply Version",
         "tags": [
           "cowork"
+        ]
+      }
+    },
+    "/api/incubator/runs/{run_id}/plan": {
+      "get": {
+        "description": "The latest plan version. 404 `plan_not_found` until the run has completed.",
+        "operationId": "get_plan_api_incubator_runs__run_id__plan_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Get Plan",
+        "tags": [
+          "plans"
+        ]
+      }
+    },
+    "/api/incubator/runs/{run_id}/plan/export": {
+      "get": {
+        "operationId": "export_plan_api_incubator_runs__run_id__plan_export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "md",
+              "enum": [
+                "md",
+                "pdf"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The dossier as a file download."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "PDF rendering is unavailable"
+          }
+        },
+        "summary": "Export Plan",
+        "tags": [
+          "plans"
         ]
       }
     },

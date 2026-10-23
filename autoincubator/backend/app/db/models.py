@@ -217,3 +217,22 @@ class FounderProfileRow(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+class BusinessPlanRow(Base):
+    """The Editor's assembled plan (structured) and its rendered Markdown dossier."""
+
+    __tablename__ = "business_plans"
+    __table_args__ = (UniqueConstraint("run_id", "version"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    run_id: Mapped[uuid.UUID] = _run_fk()
+    user_id: Mapped[uuid.UUID] = _user_id()
+    idea_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ideas.id", ondelete="SET NULL")
+    )
+    version: Mapped[int] = mapped_column(Integer)
+    plan: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    """A BusinessPlan, validated on read."""
+    markdown: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = _now()

@@ -233,3 +233,14 @@ async def test_editor_may_quote_key_figures_but_not_invent_them() -> None:
     plan = (await editor_node(_editor_state(), f.runtime(d)))["plan"]
     assert "$640" in plan.executive_summary
     assert "$1,000,000" in _llm(d).calls[1].messages[-1].content
+
+
+async def test_agents_may_restate_a_number_from_the_brief_and_the_editor_flags_it() -> None:
+    brief = f.idea_brief(title="Traceability startup raises $12M")
+    quoting = f.gtm_plan().model_dump(mode="json")
+    quoting["positioning"] = "Like the startup that raised $12M, but for small clinics."
+    d = f.deps({"gtm_strategist": [quoting]})
+    out = await gtm_strategist_node(_state(selected_brief=brief), f.runtime(d))
+    assert len(_llm(d).calls) == 1  # accepted first time
+    checks = run_checks(brief, f.product_plan(), out["gtm"], f.assumption_set(), f.seeded_input())
+    assert [(c.code, c.untraced) for c in checks] == [("untraced_number", ["$12M"])]

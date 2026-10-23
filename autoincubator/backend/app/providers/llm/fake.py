@@ -209,7 +209,7 @@ def _extract(text: str, target: int) -> dict[str, Any]:
                     {
                         "category": _CATEGORIES[h % len(_CATEGORIES)],
                         "url": url,
-                        "evidence": snippet[:390] or title,
+                        "evidence": f"{title}: {snippet}"[:390] if snippet else title,
                     }
                 ],
                 "novelty_score": 4 + h % 6,
@@ -364,7 +364,7 @@ _MVP_FEATURE_DAYS = 10.0
 _BUILD_WEEKS = 6.0
 _HOURS = re.compile(r"weekly hours available: (\d+)")
 _CAPITAL = re.compile(r"- capital: \$([\d,]+)")
-_KEY_ARPA = re.compile(r"- base: ARPA (\$[\d,.]+)")
+_KEY_ARPA = re.compile(r"- base: ARPA (\$[\d,]*\d(?:\.\d+)?)")
 
 
 def _plan_brief(text: str) -> dict[str, Any]:

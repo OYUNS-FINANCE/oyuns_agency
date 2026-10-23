@@ -20,7 +20,7 @@ from app.agents.gtm_strategist.schemas import GtmPlan
 from app.events.schema import AgentCompleted, AgentStarted
 from app.graph.deps import GraphDeps
 from app.graph.state import Phase1State
-from app.services.plan_trace import brief_registry, gtm_registry
+from app.services.plan_trace import gtm_registry, known_brief_numbers
 
 AGENT = "gtm_strategist"
 _NAMES = frozenset({"name", "step", "channel"})
@@ -31,7 +31,7 @@ async def gtm_strategist_node(state: Phase1State, runtime: Runtime[GraphDeps]) -
     brief = selected_brief(state)
     started = time.monotonic()
     await deps.events.emit(AgentStarted(node=AGENT, items=1), agent=AGENT)
-    known, allowed = brief_registry(brief), brief_urls(brief)
+    known, allowed = known_brief_numbers(brief), brief_urls(brief)
 
     def check(out: GtmPlan) -> None:
         check_sources((c.expected_cac for c in out.channels), allowed)

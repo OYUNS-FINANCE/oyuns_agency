@@ -24,10 +24,10 @@ from app.services.finance import FinancialModel
 from app.services.plan_checks import run_checks
 from app.services.plan_trace import (
     assumption_registry,
-    brief_registry,
     contradiction_registry,
     financial_registry,
     gtm_registry,
+    known_brief_numbers,
     product_registry,
 )
 
@@ -63,7 +63,7 @@ async def editor_node(state: Phase1State, runtime: Runtime[GraphDeps]) -> Phase1
 
     checks = run_checks(brief, product, gtm, assumptions, state["run_input"])
     known = (
-        brief_registry(brief)
+        known_brief_numbers(brief)
         .extend(product_registry(product))
         .extend(gtm_registry(gtm))
         .extend(assumption_registry(assumptions))

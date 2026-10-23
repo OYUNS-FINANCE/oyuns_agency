@@ -21,7 +21,7 @@ from app.events.schema import AgentCompleted, AgentStarted
 from app.graph.deps import GraphDeps
 from app.graph.state import Phase1State
 from app.services import finance
-from app.services.plan_trace import assumption_registry, brief_registry
+from app.services.plan_trace import assumption_registry, known_brief_numbers
 
 AGENT = "financial_modeler"
 _NAMES = frozenset({"name", "channel"})
@@ -32,7 +32,7 @@ async def financial_modeler_node(state: Phase1State, runtime: Runtime[GraphDeps]
     brief = selected_brief(state)
     started = time.monotonic()
     await deps.events.emit(AgentStarted(node=AGENT, items=1), agent=AGENT)
-    known, allowed = brief_registry(brief), brief_urls(brief)
+    known, allowed = known_brief_numbers(brief), brief_urls(brief)
 
     def check(out: AssumptionSet) -> None:
         check_sources(out.figures(), allowed)

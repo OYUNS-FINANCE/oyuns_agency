@@ -24,12 +24,11 @@ from app.agents.product_architect.schemas import (
     WORKING_DAYS_PER_WEEK,
     ProductPlan,
 )
-from app.services.plan_trace import MVP_DAYS_FORMULA, brief_registry
+from app.services.plan_trace import BRIEF_NON_PROSE, MVP_DAYS_FORMULA, brief_registry
 from app.services.trace import iter_strings, untraced_in
 
 MVP_ESTIMATE_TOLERANCE = 0.2
 WEEKS_PER_MONTH = 52 / 12
-_BRIEF_NON_PROSE = frozenset({"id", "url", "source_url"})
 
 
 def _money(v: float) -> str:
@@ -158,7 +157,7 @@ def check_launch_timing(
 
 
 def check_brief_numbers(brief: IdeaBrief) -> list[Contradiction]:
-    untraced = untraced_in(iter_strings(brief, _BRIEF_NON_PROSE), brief_registry(brief))
+    untraced = untraced_in(iter_strings(brief, BRIEF_NON_PROSE), brief_registry(brief))
     if not untraced:
         return []
     return [

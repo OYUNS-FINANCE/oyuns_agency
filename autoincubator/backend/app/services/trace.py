@@ -24,7 +24,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-TraceKind = Literal["source", "assumption", "estimate", "engine", "score"]
+TraceKind = Literal["source", "assumption", "estimate", "engine", "score", "brief"]
+"""`brief`: a number carried over from the idea brief's text; checked there, not here."""
 
 STRUCTURAL_INTEGERS = frozenset({*range(13), 30, 60, 90, 100})
 _MULTIPLIERS = {"k": 1e3, "K": 1e3, "m": 1e6, "M": 1e6, "mn": 1e6, "bn": 1e9, "B": 1e9}
@@ -152,8 +153,10 @@ def iter_strings(model: BaseModel, exempt: frozenset[str] = frozenset()) -> Iter
 
 
 def untraced_in(texts: Iterable[str], registry: FigureRegistry) -> list[str]:
-    seen: dict[str, None] = {}
+    """Untraced numbers as first written, once per value ("$12M" and "$12m" are one)."""
+    seen: dict[tuple[float, bool], str] = {}
     for text in texts:
-        for raw in registry.untraced(text):
-            seen.setdefault(raw)
-    return list(seen)
+        for token in extract_numbers(text):
+            if not registry.matches(token):
+                seen.setdefault((token.value, token.is_percent), token.raw)
+    return list(seen.values())

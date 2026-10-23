@@ -1,0 +1,29 @@
+@font-face { font-family: "Noto Sans"; font-weight: 400; src: url("NotoSans-Regular.ttf"); }
+@font-face { font-family: "Noto Sans"; font-weight: 700; src: url("NotoSans-Bold.ttf"); }
+
+@page {
+  size: A4;
+  margin: 18mm 16mm 20mm;
+  @bottom-right { content: counter(page) " / " counter(pages); font: 8pt "Noto Sans"; color: #777; }
+  @bottom-left { content: string(title); font: 8pt "Noto Sans"; color: #777; }
+}
+@page :first { @bottom-left { content: none; } }
+
+html { font-family: "Noto Sans", sans-serif; font-size: 9.5pt; line-height: 1.45; color: #1d1d1b; }
+h1 { string-set: title content(); font-size: 22pt; line-height: 1.15; margin: 0 0 4mm; }
+h2 { break-before: page; font-size: 15pt; border-bottom: 1.5pt solid #0f766e; padding-bottom: 1.5mm; margin-top: 0; }
+h2:first-of-type { break-before: auto; margin-top: 8mm; } /* the summary stays on the cover */
+h3 { font-size: 11pt; margin: 6mm 0 2mm; break-after: avoid; }
+h2, h3 { color: #0f3f3b; }
+p, li { orphans: 3; widows: 3; }
+blockquote { margin: 3mm 0; padding: 2mm 4mm; border-left: 2.5pt solid #0f766e; background: #f0f7f6; }
+blockquote p { margin: 0; }
+a { color: #0f766e; text-decoration: none; overflow-wrap: anywhere; }
+code { font-family: "Noto Sans", sans-serif; background: #fdecea; color: #9b1c1c; padding: 0 1mm; }
+
+table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; font-size: 8pt; }
+thead { display: table-header-group; }
+tr { break-inside: avoid; }
+th { background: #eef2f1; text-align: left; font-weight: 700; }
+th, td { border: 0.5pt solid #cfd8d6; padding: 1.2mm 1.6mm; vertical-align: top; overflow-wrap: break-word; }
+td[style*="right"], th[style*="right"] { font-variant-numeric: tabular-nums; white-space: nowrap; }

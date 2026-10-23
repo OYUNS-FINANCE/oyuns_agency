@@ -9,7 +9,7 @@ from app.agents.financial_modeler.schemas import AssumptionSet
 from app.agents.gtm_strategist.schemas import GtmPlan
 from app.agents.product_architect.schemas import ProductPlan
 from app.services import finance
-from app.services.trace import FigureRegistry
+from app.services.trace import FigureRegistry, iter_strings
 
 MVP_DAYS_FORMULA = 'sum of "now" feature estimates (days)'
 
@@ -44,6 +44,23 @@ def brief_registry(brief: IdeaBrief) -> FigureRegistry:
     for score in brief.critique.scores:
         r.add(score.score, "score", score.dimension, "Skeptic rubric")
     return r
+
+
+BRIEF_NON_PROSE = frozenset({"id", "url", "source_url"})
+
+
+def brief_text_registry(brief: IdeaBrief) -> FigureRegistry:
+    """Numbers written in the brief's own text. Phase-2 agents may restate them; whether
+    they are sourced is the Editor's `untraced_number` check on the brief, not theirs."""
+    r = FigureRegistry()
+    for text in iter_strings(brief, BRIEF_NON_PROSE):
+        r.add_text(text, "brief", "idea brief", "brief text")
+    return r
+
+
+def known_brief_numbers(brief: IdeaBrief) -> FigureRegistry:
+    """What a Phase-2 agent may restate from the brief: its figures and its text."""
+    return brief_registry(brief).extend(brief_text_registry(brief))
 
 
 def product_registry(p: ProductPlan) -> FigureRegistry:

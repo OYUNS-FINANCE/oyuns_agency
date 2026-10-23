@@ -6,7 +6,7 @@ from arq.connections import ArqRedis
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
-from app.api import cowork, health, profile, runs
+from app.api import cowork, health, plans, profile, runs
 from app.core.config import get_settings
 from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging, get_logger
@@ -74,6 +74,7 @@ def create_app() -> FastAPI:
     app.include_router(runs.router, prefix="/api")
     app.include_router(cowork.router, prefix="/api")
     app.include_router(profile.router, prefix="/api")
+    app.include_router(plans.router, prefix="/api")
     app.openapi = lambda: _openapi_with_events(app)  # type: ignore[method-assign]
     return app
 

@@ -176,7 +176,7 @@ FORMULAS: dict[str, str] = {
     "months.opex": "Σ fixed costs + Σ channel spend (from launch)",
     "months.net_cash_flow": "gross profit - opex",
     "months.cash": "previous cash + net cash flow",
-    "break_even_month": "first month with net cash flow ≥ 0",
+    "break_even_month": "first month with net cash flow of 0 or more",
     "cash_out_month": "first month with cash < 0",
     "runway_after_m12": "month-12 cash / month-12 burn",
 }

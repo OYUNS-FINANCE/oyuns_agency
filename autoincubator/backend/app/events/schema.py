@@ -44,6 +44,9 @@ class RunResumed(EventData):
 
 class RunCompleted(EventData):
     event_type: ClassVar[str] = "run.completed"
+    plan_version: int | None = Field(
+        default=None, description="The business plan version written with the completion."
+    )
 
 
 class RunErrored(EventData):

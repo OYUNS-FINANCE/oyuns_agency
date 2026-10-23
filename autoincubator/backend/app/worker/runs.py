@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.agents.common.brief import CheckpointPayload, ResumePayload
 from app.agents.common.schemas import RunInput
+from app.agents.editor.schemas import BusinessPlan
 from app.core.config import Settings
 from app.core.logging import get_logger
 from app.db.enums import RunStatus
@@ -33,6 +34,7 @@ from app.graph.builder import compile_graph
 from app.graph.checkpointer import postgres_checkpointer
 from app.graph.state import Phase1State
 from app.services import ideas as ideas_service
+from app.services import plans as plans_service
 from app.services import runs as runs_service
 from app.services.budget import BudgetExhaustedError
 from app.services.cowork import RESUME_JOB_PREFIX
@@ -164,10 +166,16 @@ async def _persist_checkpoint(
             raise LeaseLostError(run.id)
 
 
-async def _complete(rt: WorkerRuntime, run: Run, owner: str) -> None:
+async def _complete(rt: WorkerRuntime, run: Run, owner: str, plan: BusinessPlan) -> None:
+    """The plan, `run.completed` and the status change commit together: a completed run
+    always has its plan, and a replay after a crash does not write it twice."""
     async with rt.sessionmaker() as session, session.begin():
+        await plans_service.persist(session, run.id, run.user_id, plan)
         await events_repo.insert_event(
-            session, run_id=run.id, user_id=run.user_id, data=RunCompleted()
+            session,
+            run_id=run.id,
+            user_id=run.user_id,
+            data=RunCompleted(plan_version=plans_service.FIRST_VERSION),
         )
         if not await runs_service.transition(
             session, run.id, run.user_id, RunStatus.COMPLETED, lease_owner=owner
@@ -216,7 +224,10 @@ async def _drive_graph(rt: WorkerRuntime, run: Run, owner: str) -> None:
             rt, run, owner, CheckpointPayload.model_validate(snapshot.interrupts[0].value)
         )
     elif not snapshot.next:
-        await _complete(rt, run, owner)
+        plan = snapshot.values.get("plan")
+        if plan is None:
+            raise RuntimeError("the graph finished without a business plan")
+        await _complete(rt, run, owner, plan)
 
 
 async def _stop(

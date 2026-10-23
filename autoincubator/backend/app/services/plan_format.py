@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 
 def money(v: float | None) -> str:
     if v is None:
@@ -26,3 +28,28 @@ def ratio(v: float | None) -> str:
 
 def month(v: int | None) -> str:
     return "not within 12 months" if v is None else f"month {v}"
+
+
+def figure(value: float, unit: str) -> str:
+    """A SourcedFigure's value, formatted by its unit: money, a share, or a count."""
+    u = unit.lower()
+    if "share" in u or "fraction" in u:
+        return pct(value)
+    if "usd" in u or "$" in u:
+        return money(value)
+    return f"{value:,.0f}" if float(value).is_integer() else f"{value:,.2f}"
+
+
+def cell(text: str | None) -> str:
+    """Text safe inside a Markdown table cell: one line, pipes escaped."""
+    return " ".join((text or "").split()).replace("|", "\\|")
+
+
+_BLOCK_START = re.compile(r"^(#|>|[-*+]\s|\d+[.)]\s)")
+
+
+def inline(text: str | None) -> str:
+    """Untrusted prose as one Markdown paragraph: no line breaks, and a leading heading,
+    quote or list marker is escaped so it renders as text."""
+    flat = " ".join((text or "").split())
+    return "\\" + flat if _BLOCK_START.match(flat) else flat
