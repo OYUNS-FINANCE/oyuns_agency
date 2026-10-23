@@ -62,6 +62,7 @@ cp .env.example .env                       # first time only
 corepack enable                            # provides pnpm (pinned in frontend/package.json)
 docker compose up -d --wait                # postgres + redis, waits for healthy
 cd backend && uv run alembic upgrade head
+brew install pango                         # macOS, once: PDF export (WeasyPrint); see ADR 0007
 cd backend && uv run uvicorn app.main:app --reload                # API on :8000
 cd backend && uv run arq app.worker.main.WorkerSettings
 cd backend && PYTHONPATH=. uv run python scripts/enqueue_ping.py  # worker smoke check
@@ -72,6 +73,8 @@ curl -XPOST localhost:8000/api/incubator/runs -H 'content-type: application/json
 curl -N localhost:8000/api/incubator/runs/RUN_ID/stream            # SSE; needs api + worker
 curl -N -XPOST localhost:8000/api/incubator/runs/RUN_ID/ideas/IDEA_ID/cowork -H 'content-type: application/json' -d '{"agent":"analyst","content":"..."}'  # paused runs only
 curl -XPOST localhost:8000/api/incubator/runs/RUN_ID/select -H 'content-type: application/json' -d '{"idea_id":"IDEA_ID"}'   # resume into Phase 2
+curl localhost:8000/api/incubator/runs/RUN_ID/plan                                    # structured plan (completed runs)
+curl -OJ 'localhost:8000/api/incubator/runs/RUN_ID/plan/export?format=pdf'           # or format=md
 cd backend && uv run pytest && uv run mypy app scripts tests migrations && uv run ruff check .
 cd backend && uv run pytest -m integration                        # needs compose up
 cd frontend && pnpm dev                                           # web on :3000, proxies /api
@@ -79,4 +82,5 @@ cd frontend && pnpm typecheck && pnpm lint && pnpm test
 cd frontend && pnpm gen:api                                       # regenerate src/lib/api/schema.d.ts after make openapi
 ```
 `make up | migrate | api | worker | ping | phase1 ARGS="--auto" | openapi | web | check | test-integration` wrap the same commands.
+On macOS, run the API, the worker and pytest with `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib` so WeasyPrint finds Pango; the make targets do this.
 Keep this list accurate as it changes.
