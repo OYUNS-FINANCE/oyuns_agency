@@ -52,7 +52,7 @@ def check_sources(allowed: set[str]) -> Callable[[MarketAnalysisOutput], None]:
     return check
 
 
-async def _analyse(
+async def analyse_opportunity(
     opp: RawOpportunity, run_context: str, deps: GraphDeps
 ) -> tuple[MarketAnalysis | None, list[UsageRecord]]:
     """Returns (None, usage) when the model cannot produce a valid analysis: the idea is
@@ -107,7 +107,7 @@ async def analyst_node(state: Phase1State, runtime: Runtime[GraphDeps]) -> Phase
     started = time.monotonic()
     await deps.events.emit(AgentStarted(node="analyst", items=len(todo)), agent=AGENT)
     outcomes = await gather_bounded(
-        (_analyse(o, run_context, deps) for o in todo), deps.settings.agent_concurrency
+        (analyse_opportunity(o, run_context, deps) for o in todo), deps.settings.agent_concurrency
     )
     analyses = {a.opportunity_id: a for a, _ in outcomes if a is not None}
     usage = [u for _, us in outcomes for u in us]

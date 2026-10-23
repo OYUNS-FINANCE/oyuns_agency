@@ -65,18 +65,25 @@ class AnthropicLLM(StructuredLLMProvider):
             else BetaAssistantMessageParam(role="assistant", content=m.content)
             for m in messages
         ]
-        response = await self.client.beta.messages.create(
-            model=request.model,
-            max_tokens=request.max_tokens,
-            system=request.system,
-            messages=params,
-            output_config={
+        kwargs: dict[str, Any] = {
+            "model": request.model,
+            "max_tokens": request.max_tokens,
+            "system": request.system,
+            "messages": params,
+            "output_config": {
                 "effort": self.effort,
                 "format": {"type": "json_schema", "schema": self._schema(request.output_type)},
             },
-            betas=[FALLBACK_BETA],
-            fallbacks="default",
-        )
+            "betas": [FALLBACK_BETA],
+            "fallbacks": "default",
+        }
+        if request.on_delta is None:
+            response = await self.client.beta.messages.create(**kwargs)
+        else:
+            async with self.client.beta.messages.stream(**kwargs) as stream:
+                async for delta in stream.text_stream:
+                    await request.on_delta(delta, attempt)
+                response = await stream.get_final_message()
         u = response.usage
         record = UsageRecord(
             agent=request.agent,

@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from app.providers.llm.base import (
     BeforeCallHook,
     ChatMessage,
+    DeltaHook,
     LLMRequest,
     RawCompletion,
     StructuredLLMProvider,
@@ -93,6 +94,8 @@ class FakeLLM(StructuredLLMProvider):
         else:
             raise LookupError(f"FakeLLM has no scripted response left for agent {request.agent!r}")
         text = _to_text(item)
+        if request.on_delta is not None:
+            await _stream(text, request.on_delta, attempt)
         prompt_chars = len(request.system) + sum(len(m.content) for m in messages)
         usage = UsageRecord(
             agent=request.agent,
@@ -103,6 +106,17 @@ class FakeLLM(StructuredLLMProvider):
             attempt=attempt,
         )
         return RawCompletion(text=text, usage=usage)
+
+
+STREAM_CHUNK_CHARS = 24
+STREAM_CHUNK_DELAY_S = 0.01
+
+
+async def _stream(text: str, on_delta: DeltaHook, attempt: int) -> None:
+    """Delivers scripted text in small chunks, like a real token stream."""
+    for i in range(0, len(text), STREAM_CHUNK_CHARS):
+        await on_delta(text[i : i + STREAM_CHUNK_CHARS], attempt)
+        await asyncio.sleep(STREAM_CHUNK_DELAY_S)
 
 
 # --- Offline responder -------------------------------------------------------------------
@@ -290,6 +304,56 @@ def _critique(text: str) -> dict[str, Any]:
     }
 
 
+_BRIEF = re.compile(r"<idea_brief>\n(.*?)\n</idea_brief>", re.DOTALL)
+_FOUNDER = re.compile(r"Founder \(to the [^)]*\): (.*)\Z", re.DOTALL)
+
+
+def _briefs(text: str) -> list[dict[str, Any]]:
+    return [json.loads(b) for b in _BRIEF.findall(text)]
+
+
+def _cowork(agent: str, text: str) -> dict[str, Any]:
+    """A short reply and, unless the founder says "no change", one edit to the one-liner
+    that folds the founder's message in. Deterministic, so UI tests can rely on it."""
+    founder = _FOUNDER.search(text)
+    message = founder.group(1).strip() if founder else ""
+    (brief,) = _briefs(text) or [{}]
+    title = str(brief.get("opportunity", {}).get("title", "this idea"))
+    reply = (
+        f"Offline {agent} reply about {title!r}. You said: {message[:200]}. "
+        "Here is a sharper one-liner that reflects it."
+    )
+    if "no change" in message.lower():
+        return {"reply": f"Offline {agent} reply: understood, nothing to change.", "edits": []}
+    one_liner = f"{title}, focused on: {message}"[:300]
+    return {
+        "reply": reply,
+        "edits": [
+            {"op": "replace", "path": "/opportunity/one_liner", "value_json": json.dumps(one_liner)}
+        ],
+    }
+
+
+def _merge(text: str) -> dict[str, Any]:
+    sources = _briefs(text)
+    titles = " + ".join(str(o["title"]) for o in sources)
+    signals = [s for o in sources for s in o["signals"]]
+    unique = list({s["url"]: s for s in signals}.values())[:6]
+    first = sources[0]
+    return {
+        "title": f"Hybrid: {titles}"[:120],
+        "one_liner": f"One product combining {titles}"[:300],
+        "problem": " ".join(str(o["problem"]) for o in sources)[:800],
+        "target_customer": first["target_customer"],
+        "industry": first["industry"],
+        "business_model": first["business_model"],
+        "signals": unique,
+        "novelty_score": max(int(o["novelty_score"]) for o in sources),
+        "signal_strength": max(int(o["signal_strength"]) for o in sources),
+        "is_generic": False,
+    }
+
+
 def offline_responder(request: LLMRequest[BaseModel], messages: Sequence[ChatMessage]) -> Scripted:
     """Plausible, schema-valid answers derived only from the prompt. Used by
     `LLM_PROVIDER=fake` outside tests so the CLI runs end-to-end without a network."""
@@ -304,4 +368,8 @@ def offline_responder(request: LLMRequest[BaseModel], messages: Sequence[ChatMes
             return _analysis(text)
         case "skeptic":
             return _critique(text)
+        case "scout.merge":
+            return _merge(text)
+        case "cowork.scout" | "cowork.analyst" | "cowork.skeptic":
+            return _cowork(request.agent.removeprefix("cowork."), text)
     raise LookupError(f"offline responder has no rule for agent {request.agent!r}")

@@ -36,6 +36,9 @@ UsageHook = Callable[[UsageRecord], Awaitable[None]]
 BeforeCallHook = Callable[[str], Awaitable[None]]
 """Called with the agent name before every provider call, retries included. Raising
 (e.g. BudgetExhaustedError) stops the call."""
+DeltaHook = Callable[[str, int], Awaitable[None]]
+"""Receives raw output text as it is generated, with the attempt number. A new attempt
+(a validation retry) starts from empty text again."""
 
 
 @dataclass(frozen=True)
@@ -48,6 +51,8 @@ class LLMRequest[T: BaseModel]:
     max_tokens: int = 16_000
     validator: Callable[[T], None] | None = None
     """Extra semantic check after schema validation; raise ValueError to trigger a retry."""
+    on_delta: DeltaHook | None = None
+    """When set, the provider streams and reports text deltas as they arrive."""
 
 
 @dataclass(frozen=True)

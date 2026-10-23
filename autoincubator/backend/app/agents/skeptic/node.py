@@ -22,7 +22,7 @@ log = structlog.get_logger(__name__)
 AGENT = "skeptic"
 
 
-async def _critique(
+async def critique_opportunity(
     opp: RawOpportunity, analysis: MarketAnalysis, run_context: str, deps: GraphDeps
 ) -> tuple[CritiqueScorecard | None, list[UsageRecord]]:
     """Returns (None, usage) when no valid scorecard is produced; the idea is then unranked."""
@@ -64,7 +64,7 @@ async def skeptic_node(state: Phase1State, runtime: Runtime[GraphDeps]) -> Phase
     started = time.monotonic()
     await deps.events.emit(AgentStarted(node="skeptic", items=len(todo)), agent=AGENT)
     outcomes = await gather_bounded(
-        (_critique(o, analyses[o.id], run_context, deps) for o in todo),
+        (critique_opportunity(o, analyses[o.id], run_context, deps) for o in todo),
         deps.settings.agent_concurrency,
     )
     critiques = {c.opportunity_id: c for c, _ in outcomes if c is not None}

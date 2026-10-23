@@ -25,6 +25,13 @@ def _neutralise(text: str) -> str:
     return _TAG_LIKE.sub(r"&lt;\1untrusted_web_content", text)
 
 
+def neutralise_tags(text: str, *tags: str) -> str:
+    """Stop `text` from opening or closing any of the given delimiter tags."""
+    for tag in tags:
+        text = re.sub(rf"<\s*(/?)\s*{re.escape(tag)}", rf"&lt;\1{tag}", text, flags=re.IGNORECASE)
+    return _neutralise(text)
+
+
 def wrap_untrusted(results: Sequence[SearchResult]) -> str:
     """Render search results as one delimited block, one result per numbered entry."""
     lines = [OPEN_TAG]

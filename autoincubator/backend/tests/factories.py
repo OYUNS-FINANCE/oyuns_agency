@@ -17,6 +17,7 @@ from app.graph.deps import GraphDeps
 from app.providers.dedup import JaccardDeduplicator
 from app.providers.llm.fake import FakeLLM, Scripted
 from app.providers.search.mock import MockSearchProvider
+from app.services.brief_patch import EditableBrief
 
 # URLs that exist in app/providers/search/fixtures/results.json
 DENTAL_URL = "https://news.example/2026/dental-phone-confirmations"
@@ -165,3 +166,7 @@ def market_analysis(oid: str, source_url: str | None = MARKET_URL) -> MarketAnal
 
 def scorecard(oid: str, score: int | Mapping[str, int] = 7) -> CritiqueScorecard:
     return CritiqueScorecard(**critique(score).model_dump(), opportunity_id=oid)
+
+
+def editable_brief(oid: str = "opp-01", title: str = "Dental reminders") -> EditableBrief:
+    return EditableBrief(opportunity=opportunity(oid, title), analysis=market_analysis(oid))
