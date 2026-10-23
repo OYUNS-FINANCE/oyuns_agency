@@ -74,6 +74,7 @@ cd backend && uv run pytest && uv run mypy app scripts tests migrations && uv ru
 cd backend && uv run pytest -m integration                        # needs compose up
 cd frontend && pnpm dev                                           # web on :3000, proxies /api
 cd frontend && pnpm typecheck && pnpm lint && pnpm test
+cd frontend && pnpm gen:api                                       # regenerate src/lib/api/schema.d.ts after make openapi
 ```
 `make up | migrate | api | worker | ping | phase1 ARGS="--auto" | openapi | web | check | test-integration` wrap the same commands.
 Keep this list accurate as it changes.

@@ -3,18 +3,131 @@
 Claude updates this file at the end of every phase. Newest entries go on top.
 
 ## Current phase
-Phase 2 — done; Phase 3 (frontend: start screen & live discovery) next.
+Phase 3 — done; Phase 4 (co-working checkpoint, HITL) next.
 Still open from Phase 1: the real-Anthropic-key CLI check.
 
 ## Phase checklist
 - [x] 0 — Skeleton & infrastructure
 - [x] 1 — Phase-1 graph core (offline) — real-key CLI run pending
 - [x] 2 — Runs, persistence, worker & streaming
-- [ ] 3 — Frontend: start screen & live discovery
+- [x] 3 — Frontend: start screen & live discovery
 - [ ] 4 — Co-working checkpoint (HITL)
 - [ ] 5 — Phase-2 agents, finance engine & export
 - [ ] 6 — Real search, evals, cost & observability
 - [ ] 7 — Deployment
+
+---
+
+### Phase 3 — Frontend: start screen & live discovery (2026-10-23)
+**Built:**
+- **API types and client:**
+  - `openapi-typescript` 7.13.0 generates `src/lib/api/schema.d.ts` from `backend/openapi.json`
+    (`pnpm gen:api`); a Vitest test fails when the file is stale.
+  - `src/lib/api/client.ts` is a thin fetch wrapper with an `ApiError {status, code, message,
+    details}` that reads the backend error shape; `describeError` lists 422 field errors.
+  - Query hooks and keys live in `src/lib/api/queries.ts`.
+- **`useRunStream(runId)`** (`src/lib/sse/`; ADR 0005): `fetch` + streamed body + our own SSE
+  parser, not `EventSource`.
+  - Sends a real `Last-Event-ID` header on every connect.
+  - Backoff: 0.5 s doubling to a 15 s cap, with jitter.
+  - Statuses: `connecting | live | reconnecting | closed | error`. A 404 stops the stream;
+    a 5xx or network error retries.
+  - Cache: `["runs","events",id]` dedups by id; `["runs","detail",id]` is patched in place,
+    then refetched (debounced) on idea or lifecycle events and after every reconnect.
+  - Resumes from the cached cursor when remounted, including when Next shows a hidden
+    `<Activity>` page again.
+- **Routes:**
+  - `/`: mode cards, seed with counter, collapsible constraints, "Discover & Incubate", and
+    recent runs.
+  - `/runs`: paged history with status badges.
+  - `/runs/[runId]`, header: status badge, connection indicator, budget meter (tokens,
+    searches, cost; the detail is polled every 5 s while the run is working).
+  - `/runs/[runId]`, banners: reconnecting, stream error, budget warning, budget exhausted,
+    failed, awaiting review/shortfall.
+  - `/runs/[runId]`, body: the activity panel and the ranked cards side by side; below `lg`,
+    Activity/Ideas tabs that switch to Ideas once ideas exist.
+  - `/settings/profile`: founder profile form (chip inputs, risk segmented control, validation).
+- **Activity panel:** one collapsible pass per `agent.started` (agent hue, pass number, ideas,
+  search count, duration, summary). Tool calls show the query, idea key and result count;
+  notes (`agent.thought`) can be toggled. Run markers (status, interrupt, error, budget) appear
+  between passes. It follows new events while you are scrolled to the bottom.
+- **Idea card:** rank, title, one-liner, composite score, 7-bar rubric (fixed order, coloured
+  by score), most likely failure, distinct source count. An expandable "Market" section shows
+  TAM/SAM/SOM (linked to the source, or marked `*` with the assumption as a tooltip), the
+  analysis summary and the attack summary. A placeholder card (from `idea.created`) shows
+  until the refetch lands.
+- **States:** loading skeletons, empty (no runs; no ranked ideas, with the shortfall), error
+  with retry, not found, reconnecting, stream error, budget exhausted, failed.
+- **Look:** warm paper and ink palette, one teal signal colour, muted per-agent hues,
+  Instrument Serif for titles, Geist Mono for numbers and queries. Dark tokens are kept. A
+  header health dot replaces the Phase-0 health card.
+- **Tests:** 49 Vitest tests (was 3):
+  - SSE parser
+  - stream loop: backoff, `Last-Event-ID`, 404, malformed data, clean close
+  - `useRunStream` hook: replay dedup across reconnects, reconnecting → live, detail
+    patch/refetch, resume on remount, 404, disabled
+  - reducers, timeline grouping, idea card / source count, start form, run view states,
+    profile mapping, OpenAPI drift
+
+**Deviations from spec (and why):**
+- **Backend change:** the SSE response now sends `Cache-Control: no-cache, no-transform` (via
+  a route dependency, so it lands before the streaming body runs).
+  - Why: the Next server gzips proxied responses for browsers (`Accept-Encoding`), and that
+    buffered the whole stream until the run ended. Phase 2 verified the proxy with curl, which
+    sends no `Accept-Encoding`, so ADR 0001's "streams incrementally" was only true for curl.
+    `no-transform` is honoured by Next's `compression`, nginx and CDNs.
+  - The live integration tests now assert it on every stream. The API contract
+    (`openapi.json`) is unchanged.
+- **Hydration timing:** the run page's params resolve on the client (`use(params)` behind
+  `Suspense`), as `cacheComponents` requires for request-time params. The nav's `usePathname`
+  likewise has a static Suspense fallback.
+- **Budget form:** per-run budget caps are not in the start form (agreed in the plan); runs
+  use the server limits.
+- **Co-working ADR:** the SPEC §6 note about confirming the co-working state model "in
+  Phase 3" is deferred to the start of Phase 4 (agreed).
+- **Generated types:** openapi-typescript's `defaultNonNullable` makes fields with defaults
+  required in the generated types (e.g. `RunConstraints.business_model`). The forms always
+  send complete bodies, so this only affects test fixtures.
+
+**ADRs added:** 0005 — client SSE transport (fetch + Last-Event-ID + backoff) and the event →
+Query cache mapping.
+
+**Known issues / tech debt:**
+- **E2E harness not committed:** the end-to-end verification script (Playwright-core driving
+  installed Chrome) lives outside the repo. Adding Playwright as a dev dependency with a CI
+  job fits Phase 6.
+- **Activity panel scale:** it renders every event without virtualisation. That's fine for
+  runs of ~50–100 events; revisit if real runs produce thousands.
+- **Budget polling:** budget counters move through 5 s polling of `GET /runs/{id}`, not
+  events. A `budget.usage` event would remove the polling.
+- **Agent re-runs after a crash:** re-run steps re-emit `agent.*` events (Phase 2 known
+  issue); the panel shows them as an extra pass.
+- **Test data in the dev DB:** verification left ~200 test runs there (all `awaiting_human`).
+- `src/components/ui/card.tsx` and `badge.tsx` (Phase 0) are no longer used.
+
+**Acceptance criteria:** all passed (verified by running commands):
+- **Setup:** the real stack (uvicorn + arq worker with `FAKE_LLM_LATENCY_MS=700`, `pnpm dev`
+  on :3000) driven in headless Chrome by a Playwright script. The final two runs passed
+  20/20 checks; earlier runs failed only the console-error check (explained below).
+- **Mode A and Mode B from the UI render live to the ranked cards:** both reach 5 cards, and
+  the UI event log equals a fresh server replay (51 and 57 events, same last id).
+- **Kill and restart the API mid-run:** `pkill -9` uvicorn → the UI shows "Reconnecting" and
+  the "Connection lost — reconnecting…" banner. After a restart 6 s later it goes live,
+  catches up, and the UI log equals a server replay (51 = 51, no duplicates).
+- **Hard reload during and after a run:**
+  - During: activity is restored and keeps streaming.
+  - After: the same 5 cards, and the event log equals a server replay.
+- **Usable at 375 px:** home (constraints open), runs, profile, and the run page (Ideas and
+  Activity tabs) all have `scrollWidth == clientWidth == 375`. Screenshots were reviewed and
+  the layout fixed (history wrapping, budget meter).
+- **No console errors before the deliberate outage.** An earlier hydration warning came from
+  Playwright's own caret-hiding screenshot style, not the app.
+- **Checks:** `pnpm typecheck`, `lint`, `test` (49 passed, hook tests included),
+  `format:check` and `build` are green. Backend: `pytest` (93), `pytest -m integration` (12),
+  `mypy --strict`, `ruff check` and `ruff format --check` pass; `openapi.json` is unchanged.
+
+**Next:** Phase 4 — co-working checkpoint (`docs/phases/04-cowork-hitl.md`). Start with the
+ADR on the co-working state model (SPEC §6).
 
 ---
 
