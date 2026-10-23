@@ -9,6 +9,7 @@ from langgraph.runtime import Runtime
 
 from app.agents.analyst.schemas import MarketAnalysis, MarketAnalysisOutput
 from app.agents.common.schemas import RunInput
+from app.agents.financial_modeler.schemas import AssumptionSet
 from app.agents.scout.schemas import RawOpportunity, ScoutCandidate, ScoutQueryPlan
 from app.agents.skeptic.schemas import RUBRIC_DIMENSIONS, CritiqueOutput, CritiqueScorecard
 from app.core.config import Settings
@@ -170,3 +171,39 @@ def scorecard(oid: str, score: int | Mapping[str, int] = 7) -> CritiqueScorecard
 
 def editable_brief(oid: str = "opp-01", title: str = "Dental reminders") -> EditableBrief:
     return EditableBrief(opportunity=opportunity(oid, title), analysis=market_analysis(oid))
+
+
+def assumed(value: float, unit: str, note: str = "test assumption") -> dict[str, Any]:
+    return {"value": value, "unit": unit, "assumption": note}
+
+
+def assumption_set(**overrides: Any) -> AssumptionSet:
+    """The hand-calculated reference case in tests/unit/test_finance.py."""
+    base: dict[str, Any] = {
+        "price_tiers": [
+            {"name": "Basic", "price_monthly": assumed(20, "USD/month"),
+             "mix": assumed(0.5, "share")},
+            {"name": "Pro", "price_monthly": assumed(60, "USD/month"),
+             "mix": assumed(0.5, "share")},
+        ],
+        "channels": [
+            {"channel": "Search ads", "cac": assumed(100, "USD"),
+             "monthly_spend": assumed(1000, "USD/month")},
+            {"channel": "Content", "cac": assumed(50, "USD"),
+             "monthly_spend": assumed(500, "USD/month")},
+        ],
+        "organic_signups_m1": assumed(100, "signups"),
+        "organic_growth": assumed(0.10, "share/month"),
+        "free_to_paid": assumed(0.10, "share"),
+        "monthly_churn": assumed(0.05, "share/month"),
+        "payment_fee_pct": assumed(0.05, "share"),
+        "variable_cost_per_customer": assumed(6, "USD/month"),
+        "fixed_costs": [
+            {"name": "Tools and hosting", "monthly": assumed(2000, "USD/month")},
+            {"name": "Accounting", "monthly": assumed(500, "USD/month")},
+        ],
+        "starting_cash": assumed(20000, "USD"),
+        "launch_month": 2,
+        "launch_rationale": "One month to finish and test the MVP before charging.",
+    }  # fmt: skip
+    return AssumptionSet.model_validate({**base, **overrides})
