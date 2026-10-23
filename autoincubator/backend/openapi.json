@@ -7,6 +7,19 @@
             "title": "Duration Ms",
             "type": "integer"
           },
+          "idea_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Idea Id"
+          },
           "node": {
             "title": "Node",
             "type": "string"
@@ -75,6 +88,20 @@
       },
       "AgentStarted": {
         "properties": {
+          "idea_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Set for co-working work on one idea (re-score, merge).",
+            "title": "Idea Id"
+          },
           "items": {
             "anyOf": [
               {
@@ -300,6 +327,20 @@
           "data"
         ],
         "title": "AgentToolCallEvent",
+        "type": "object"
+      },
+      "ApplyVersionRequest": {
+        "properties": {
+          "message_id": {
+            "format": "uuid",
+            "title": "Message Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message_id"
+        ],
+        "title": "ApplyVersionRequest",
         "type": "object"
       },
       "BudgetExhausted": {
@@ -555,6 +596,152 @@
           "positioning"
         ],
         "title": "Competitor",
+        "type": "object"
+      },
+      "CoworkMessageList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CoworkMessageView"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "CoworkMessageList",
+        "type": "object"
+      },
+      "CoworkMessageView": {
+        "properties": {
+          "agent": {
+            "enum": [
+              "scout",
+              "analyst",
+              "skeptic"
+            ],
+            "title": "Agent",
+            "type": "string"
+          },
+          "applied_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The version this proposal became, if any.",
+            "title": "Applied Version"
+          },
+          "based_on_version": {
+            "title": "Based On Version",
+            "type": "integer"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "idea_id": {
+            "format": "uuid",
+            "title": "Idea Id",
+            "type": "string"
+          },
+          "proposed_patch": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PatchOperation"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed Patch"
+          },
+          "role": {
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "pending",
+              "complete",
+              "failed"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "idea_id",
+          "agent",
+          "role",
+          "state",
+          "content",
+          "proposed_patch",
+          "based_on_version",
+          "applied_version",
+          "error",
+          "created_at"
+        ],
+        "title": "CoworkMessageView",
+        "type": "object"
+      },
+      "CoworkRequest": {
+        "properties": {
+          "agent": {
+            "enum": [
+              "scout",
+              "analyst",
+              "skeptic"
+            ],
+            "title": "Agent",
+            "type": "string"
+          },
+          "content": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent",
+          "content"
+        ],
+        "title": "CoworkRequest",
         "type": "object"
       },
       "CreateRunRequest": {
@@ -980,6 +1167,26 @@
         "title": "IdeaCreatedEvent",
         "type": "object"
       },
+      "IdeaDetail": {
+        "properties": {
+          "idea": {
+            "$ref": "#/components/schemas/IdeaView"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/IdeaVersionView"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "idea",
+          "versions"
+        ],
+        "title": "IdeaDetail",
+        "type": "object"
+      },
       "IdeaStatus": {
         "enum": [
           "active",
@@ -991,6 +1198,7 @@
         "type": "string"
       },
       "IdeaUpdated": {
+        "description": "A new version (applied patch, re-score) or a status change (rejected, selected).",
         "properties": {
           "composite_score": {
             "anyOf": [
@@ -1008,6 +1216,28 @@
             "format": "uuid",
             "title": "Idea Id",
             "type": "string"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdeaVersionSource"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdeaStatus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
           },
           "version": {
             "title": "Version",
@@ -1078,6 +1308,74 @@
         "title": "IdeaVersionSource",
         "type": "string"
       },
+      "IdeaVersionView": {
+        "properties": {
+          "analysis": {
+            "$ref": "#/components/schemas/MarketAnalysis"
+          },
+          "composite_score": {
+            "title": "Composite Score",
+            "type": "number"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "critique": {
+            "$ref": "#/components/schemas/CritiqueScorecard"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
+          "opportunity": {
+            "$ref": "#/components/schemas/RawOpportunity"
+          },
+          "patch": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PatchOperation"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patch"
+          },
+          "source": {
+            "$ref": "#/components/schemas/IdeaVersionSource"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "source",
+          "created_at",
+          "composite_score",
+          "opportunity",
+          "analysis",
+          "critique",
+          "patch",
+          "message_id"
+        ],
+        "title": "IdeaVersionView",
+        "type": "object"
+      },
       "IdeaView": {
         "properties": {
           "analysis": {
@@ -1106,6 +1404,14 @@
             "title": "Key",
             "type": "string"
           },
+          "merged_from": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Merged From",
+            "type": "array"
+          },
           "opportunity": {
             "$ref": "#/components/schemas/RawOpportunity"
           },
@@ -1119,6 +1425,22 @@
               }
             ],
             "title": "Rank"
+          },
+          "reject_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reject Reason"
+          },
+          "score_stale": {
+            "description": "The idea was edited after it was last scored; re-score to update it.",
+            "title": "Score Stale",
+            "type": "boolean"
           },
           "status": {
             "$ref": "#/components/schemas/IdeaStatus"
@@ -1143,12 +1465,29 @@
           "composite_score",
           "version",
           "version_source",
+          "score_stale",
+          "merged_from",
+          "reject_reason",
           "title",
           "opportunity",
           "analysis",
           "critique"
         ],
         "title": "IdeaView",
+        "type": "object"
+      },
+      "JobAccepted": {
+        "description": "Work queued in the worker; progress and the result arrive on the run's stream.",
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "title": "JobAccepted",
         "type": "object"
       },
       "MarketAnalysis": {
@@ -1238,6 +1577,51 @@
           "som"
         ],
         "title": "MarketSizing",
+        "type": "object"
+      },
+      "MergeRequest": {
+        "properties": {
+          "idea_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 4,
+            "minItems": 2,
+            "title": "Idea Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "idea_ids"
+        ],
+        "title": "MergeRequest",
+        "type": "object"
+      },
+      "PatchOperation": {
+        "properties": {
+          "op": {
+            "enum": [
+              "add",
+              "replace",
+              "remove"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value"
+          }
+        },
+        "required": [
+          "op",
+          "path"
+        ],
+        "title": "PatchOperation",
         "type": "object"
       },
       "PricingBenchmark": {
@@ -1392,6 +1776,24 @@
           "iteration"
         ],
         "title": "RawOpportunity",
+        "type": "object"
+      },
+      "RejectRequest": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "title": "RejectRequest",
         "type": "object"
       },
       "RubricScore": {
@@ -1601,6 +2003,18 @@
             ],
             "title": "Seed"
           },
+          "selected_idea_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Idea Id"
+          },
           "shortfall": {
             "anyOf": [
               {
@@ -1658,6 +2072,7 @@
           "input",
           "shortfall",
           "budget",
+          "selected_idea_id",
           "ideas"
         ],
         "title": "RunDetail",
@@ -2161,6 +2576,44 @@
         "title": "RunSummary",
         "type": "object"
       },
+      "SelectRequest": {
+        "properties": {
+          "idea_id": {
+            "format": "uuid",
+            "title": "Idea Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "idea_id"
+        ],
+        "title": "SelectRequest",
+        "type": "object"
+      },
+      "SelectResponse": {
+        "properties": {
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "selected_idea_id": {
+            "format": "uuid",
+            "title": "Selected Idea Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          }
+        },
+        "required": [
+          "run_id",
+          "status",
+          "selected_idea_id"
+        ],
+        "title": "SelectResponse",
+        "type": "object"
+      },
       "SignalSource": {
         "properties": {
           "category": {
@@ -2247,7 +2700,7 @@
   },
   "info": {
     "title": "AutoIncubator",
-    "version": "0.2.0"
+    "version": "0.4.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -2530,6 +2983,633 @@
         "summary": "Get Run",
         "tags": [
           "runs"
+        ]
+      }
+    },
+    "/api/incubator/runs/{run_id}/ideas/merge": {
+      "post": {
+        "description": "Merges 2-4 active ideas into a hybrid in the worker: Scout synthesis, then Analyst and\nSkeptic. Progress and the new idea (`idea.created`) arrive on the run's stream.",
+        "operationId": "merge_api_incubator_runs__run_id__ideas_merge_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflicts with the run's current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Merge",
+        "tags": [
+          "cowork"
+        ]
+      }
+    },
+    "/api/incubator/runs/{run_id}/ideas/{idea_id}": {
+      "get": {
+        "description": "The idea at its latest version plus every version (oldest first), for diffs.",
+        "operationId": "get_idea_api_incubator_runs__run_id__ideas__idea_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "idea_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Idea Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdeaDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Get Idea",
+        "tags": [
+          "cowork"
+        ]
+      }
+    },
+    "/api/incubator/runs/{run_id}/ideas/{idea_id}/cowork": {
+      "get": {
+        "description": "The chat on this idea, oldest first. A reply still being generated is `pending`.",
+        "operationId": "list_cowork_messages_api_incubator_runs__run_id__ideas__idea_id__cowork_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "idea_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Idea Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoworkMessageList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "List Cowork Messages",
+        "tags": [
+          "cowork"
+        ]
+      },
+      "post": {
+        "description": "Chat with one agent about this idea; the reply streams back. The agent may propose a\nchange (`proposed_patch` on the completed message), which `POST \u2026/versions` applies.\nThe reply is stored even if this connection drops.",
+        "operationId": "cowork_api_incubator_runs__run_id__ideas__idea_id__cowork_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "idea_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Idea Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoworkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "properties": {
+                    "data": {
+                      "contentMediaType": "application/json",
+                      "type": "string"
+                    },
+                    "event": {
+                      "enum": [
+                        "started",
+                        "delta",
+                        "reset",
+                        "completed",
+                        "error"
+                      ],
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "retry": {
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "event",
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "SSE. `started` (CoworkStarted), then `delta` (CoworkDelta) events with reply text, `reset` when a retry discards the text so far, and finally `completed` (CoworkMessageView) or `error` (CoworkFailed)."
+          },
+          "404": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflicts with the run's current state"
+          },
+          "422": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Cowork",
+        "tags": [
+          "cowork"
+        ]
+      }
+    },
+    "/api/incubator/runs/{run_id}/ideas/{idea_id}/reject": {
+      "post": {
+        "description": "Rejects the idea. The reason is kept in the founder profile, so the next Mode B runs\nsteer away from it.",
+        "operationId": "reject_api_incubator_runs__run_id__ideas__idea_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "idea_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Idea Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdeaView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflicts with the run's current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Reject",
+        "tags": [
+          "cowork"
+        ]
+      }
+    },
+    "/api/incubator/runs/{run_id}/ideas/{idea_id}/rescore": {
+      "post": {
+        "description": "The Skeptic re-scores the latest version in the worker; `agent.*` and `idea.updated`\narrive on the run's stream.",
+        "operationId": "rescore_api_incubator_runs__run_id__ideas__idea_id__rescore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "idea_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Idea Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflicts with the run's current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Rescore",
+        "tags": [
+          "cowork"
+        ]
+      }
+    },
+    "/api/incubator/runs/{run_id}/ideas/{idea_id}/versions": {
+      "post": {
+        "description": "Applies an agent's proposed patch as the idea's next version (201). The same proposal\napplied again returns that version (200). The score is then stale until re-scored.",
+        "operationId": "apply_version_api_incubator_runs__run_id__ideas__idea_id__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "idea_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Idea Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdeaView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflicts with the run's current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Apply Version",
+        "tags": [
+          "cowork"
+        ]
+      }
+    },
+    "/api/incubator/runs/{run_id}/select": {
+      "post": {
+        "description": "Selects the idea to develop and resumes the graph into Phase 2. Idempotent: repeating\nthe same selection returns 202 without resuming again; another idea is a 409.",
+        "operationId": "select_api_incubator_runs__run_id__select_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflicts with the run's current state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Select",
+        "tags": [
+          "cowork"
         ]
       }
     },

@@ -10,9 +10,10 @@ from dataclasses import dataclass
 from typing import Any
 
 from langchain_core.runnables import RunnableConfig
+from langgraph.types import Command
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-from app.agents.common.brief import CheckpointPayload
+from app.agents.common.brief import CheckpointPayload, ResumePayload
 from app.agents.common.schemas import RunInput
 from app.core.config import Settings
 from app.core.logging import get_logger
@@ -21,8 +22,6 @@ from app.db.models import Run
 from app.db.repositories import events as events_repo
 from app.db.repositories import ideas as ideas_repo
 from app.db.repositories import runs as runs_repo
-from app.db.repositories.search_cache import PostgresSearchCache
-from app.events.publisher import PostgresEventSink
 from app.events.schema import (
     EventData,
     IdeaCreated,
@@ -33,10 +32,11 @@ from app.events.schema import (
 from app.graph.builder import compile_graph
 from app.graph.checkpointer import postgres_checkpointer
 from app.graph.state import Phase1State
-from app.providers.factory import build_deps
-from app.providers.llm.base import UsageRecord
+from app.services import ideas as ideas_service
 from app.services import runs as runs_service
-from app.services.budget import BudgetExhaustedError, RunBudget
+from app.services.budget import BudgetExhaustedError
+from app.services.cowork import RESUME_JOB_PREFIX
+from app.services.run_deps import run_deps
 from app.services.runs import START_RUN
 
 log = get_logger(__name__)
@@ -55,35 +55,23 @@ class WorkerRuntime:
     worker_id: str
 
 
-class PostgresUsageStore:
-    def __init__(self, rt: WorkerRuntime, run_id: uuid.UUID, user_id: uuid.UUID):
-        self.rt = rt
-        self.run_id = run_id
-        self.user_id = user_id
-
-    async def add_usage(self, usage: UsageRecord) -> int:
-        async with self.rt.sessionmaker() as session, session.begin():
-            return await runs_repo.add_usage(session, self.run_id, self.user_id, usage)
-
-    async def add_search(self) -> int:
-        async with self.rt.sessionmaker() as session, session.begin():
-            return await runs_repo.add_search(session, self.run_id)
-
-
 def _config(run_id: uuid.UUID) -> RunnableConfig:
     return {"configurable": {"thread_id": str(run_id)}}
 
 
-async def _claim(rt: WorkerRuntime, run_id: uuid.UUID, owner: str) -> Run | None:
+async def _claim(
+    rt: WorkerRuntime, run_id: uuid.UUID, owner: str, *, resuming: bool = False
+) -> Run | None:
     """Takes the lease and moves queued → running. A run that was already running had a
-    worker die under it: announce the recovery and continue from its checkpoint."""
+    worker die under it: announce the recovery and continue from its checkpoint. The resume
+    job after a selection also finds the run running (select moved it), but is no recovery."""
     async with rt.sessionmaker() as session, session.begin():
         run = await runs_repo.acquire_lease(session, run_id, owner, rt.settings.run_lease_ttl_s)
         if run is None:
             return None
         if run.status == RunStatus.QUEUED:
             await runs_service.transition(session, run.id, run.user_id, RunStatus.RUNNING)
-        else:
+        elif not resuming:
             await events_repo.insert_event(
                 session,
                 run_id=run.id,
@@ -155,12 +143,20 @@ async def _persist_checkpoint(
                 viable_count=payload.viable_count, shortfall=payload.shortfall, idea_ids=idea_ids
             ),
         )
+        # Only reached again after a resume the graph rejected (payload.error): the
+        # selection is dropped and the founder chooses again.
+        await ideas_repo.clear_selection(session, run.id)
         moved = await runs_service.transition(
             session,
             run.id,
             run.user_id,
             RunStatus.AWAITING_HUMAN,
-            values={"viable_count": payload.viable_count, "shortfall": payload.shortfall},
+            values={
+                "viable_count": payload.viable_count,
+                "shortfall": payload.shortfall,
+                "selected_idea_id": None,
+            },
+            detail=payload.error,
             lease_owner=owner,
         )
         if not moved:
@@ -179,26 +175,21 @@ async def _complete(rt: WorkerRuntime, run: Run, owner: str) -> None:
             raise LeaseLostError(run.id)
 
 
+async def _resume_value(rt: WorkerRuntime, run: Run, idea_id: uuid.UUID) -> dict[str, Any]:
+    """The selected idea at its latest version, as the checkpoint expects it (ADR 0006)."""
+    async with rt.sessionmaker() as session:
+        idea = await ideas_repo.get(session, run.id, idea_id)
+        if idea is None:
+            raise LookupError(f"selected idea {idea_id} not found in run {run.id}")
+        version = await ideas_repo.version(session, idea.id, idea.current_version)
+        assert version is not None
+    payload = ResumePayload(idea_id=str(idea.id), brief=ideas_service.to_brief(idea, version))
+    return payload.model_dump(mode="json")
+
+
 async def _drive_graph(rt: WorkerRuntime, run: Run, owner: str) -> None:
     settings = rt.settings
-    events = PostgresEventSink(rt.sessionmaker, run.id, run.user_id)
-    budget = RunBudget(
-        max_tokens=run.max_tokens,
-        max_searches=run.max_searches,
-        tokens_used=run.tokens_used,
-        searches_used=run.searches_used,
-        store=PostgresUsageStore(rt, run.id, run.user_id),
-        events=events,
-    )
-    deps = build_deps(
-        settings,
-        budget.record_usage,
-        before_call=budget.before_llm_call,
-        search_cache=PostgresSearchCache(rt.sessionmaker, run.id, run.user_id),
-        before_search=budget.before_search,
-        after_search=budget.record_search,
-        events=events,
-    )
+    deps, _ = run_deps(settings, rt.sessionmaker, run)
     config = _config(run.id)
     # durability="sync": each step's checkpoint is committed before the next step starts,
     # so a killed worker loses at most the step that was running.
@@ -214,6 +205,10 @@ async def _drive_graph(rt: WorkerRuntime, run: Run, owner: str) -> None:
         elif snapshot.next and not snapshot.interrupts:
             log.info("run.resume_from_checkpoint", run_id=str(run.id), next=list(snapshot.next))
             await graph.ainvoke(None, config, context=deps, durability="sync")
+        elif snapshot.interrupts and run.selected_idea_id is not None:
+            resume = await _resume_value(rt, run, run.selected_idea_id)
+            log.info("run.resume_with_selection", run_id=str(run.id), idea_id=resume["idea_id"])
+            await graph.ainvoke(Command(resume=resume), config, context=deps, durability="sync")
         snapshot = await graph.aget_state(config)
 
     if snapshot.interrupts:
@@ -251,7 +246,7 @@ async def execute_run(rt: WorkerRuntime, run_id: uuid.UUID, job_id: str) -> str:
     # The lease belongs to this job, not to the worker process: a worker can hold two jobs
     # for one run (arq's retry of a lost job plus a recovery job) and only one may drive it.
     owner = f"{rt.worker_id}/{job_id}"
-    run = await _claim(rt, run_id, owner)
+    run = await _claim(rt, run_id, owner, resuming=job_id.startswith(RESUME_JOB_PREFIX))
     if run is None:
         log.info("run.skipped", run_id=str(run_id), reason="not active or leased elsewhere")
         return "skipped"

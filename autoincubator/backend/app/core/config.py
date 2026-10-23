@@ -79,6 +79,12 @@ class Settings(BaseSettings):
     sse_poll_interval_s: float = Field(default=5.0, gt=0)
     """Fallback DB poll for SSE streams, in case a NOTIFY is missed."""
 
+    # Co-working (ADR 0006)
+    cowork_reply_timeout_s: float = Field(default=300.0, gt=0)
+    """A chat reply still pending after this long is reported as failed."""
+    rejected_reasons_max: int = Field(default=20, ge=1)
+    """How many recent rejection reasons the founder profile keeps for Mode B."""
+
     @property
     def asyncpg_dsn(self) -> str:
         """Plain asyncpg DSN (no SQLAlchemy driver suffix), for LISTEN connections."""

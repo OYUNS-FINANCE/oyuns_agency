@@ -13,7 +13,7 @@ from typing import Annotated, ClassVar, Literal
 
 from pydantic import BaseModel, Field, TypeAdapter
 
-from app.db.enums import RunStatus
+from app.db.enums import IdeaStatus, IdeaVersionSource, RunStatus
 
 
 class EventData(BaseModel):
@@ -60,6 +60,9 @@ class AgentStarted(EventData):
     node: str
     iteration: int | None = None
     items: int | None = Field(default=None, description="Ideas this node will work on.")
+    idea_id: uuid.UUID | None = Field(
+        default=None, description="Set for co-working work on one idea (re-score, merge)."
+    )
 
 
 class AgentThought(EventData):
@@ -82,6 +85,7 @@ class AgentCompleted(EventData):
     node: str
     duration_ms: int
     summary: dict[str, int] = Field(default_factory=dict)
+    idea_id: uuid.UUID | None = None
 
 
 # --- Ideas ------------------------------------------------------------------------------
@@ -98,10 +102,14 @@ class IdeaCreated(EventData):
 
 
 class IdeaUpdated(EventData):
+    """A new version (applied patch, re-score) or a status change (rejected, selected)."""
+
     event_type: ClassVar[str] = "idea.updated"
     idea_id: uuid.UUID
     version: int
     composite_score: float | None = None
+    status: IdeaStatus | None = None
+    source: IdeaVersionSource | None = None
 
 
 # --- Budget -----------------------------------------------------------------------------

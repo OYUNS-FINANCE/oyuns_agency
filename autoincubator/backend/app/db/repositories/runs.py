@@ -25,6 +25,19 @@ async def get(session: AsyncSession, run_id: uuid.UUID, user_id: uuid.UUID) -> R
     return run
 
 
+async def get_for_update(
+    session: AsyncSession, run_id: uuid.UUID, user_id: uuid.UUID
+) -> Run | None:
+    """Row-locks the run: co-working writes and select serialise on it (ADR 0006)."""
+    run: Run | None = await session.scalar(
+        select(Run)
+        .where(Run.id == run_id, Run.user_id == user_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    return run
+
+
 async def get_any(session: AsyncSession, run_id: uuid.UUID) -> Run | None:
     """Worker-side read: the worker acts for whichever user owns the run."""
     return await session.get(Run, run_id, populate_existing=True)

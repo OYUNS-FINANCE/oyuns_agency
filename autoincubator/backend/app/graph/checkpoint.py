@@ -48,7 +48,5 @@ def checkpoint_node(state: Phase1State) -> Phase1State:
         log.warning("checkpoint.invalid_selection", error=error)
         resume = interrupt(checkpoint_payload(state, error).model_dump(mode="json"))
     selection = ResumePayload.model_validate(resume)
-    log.info(
-        "checkpoint.resumed", selected_idea_id=selection.idea_id, key=selection.brief.idea_id
-    )
+    log.info("checkpoint.resumed", selected_idea_id=selection.idea_id, key=selection.brief.idea_id)
     return {"selected_idea_id": selection.idea_id, "selected_brief": selection.brief}

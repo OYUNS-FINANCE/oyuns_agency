@@ -7,7 +7,7 @@ from collections.abc import AsyncIterable
 from typing import Annotated
 
 from arq.connections import ArqRedis
-from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
+from fastapi import APIRouter, Depends, Header, Query, Request, status
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -18,6 +18,7 @@ from app.api.deps import (
     get_current_user_id,
     get_session,
     get_sessionmaker,
+    no_transform,
 )
 from app.core.config import Settings
 from app.core.errors import ERROR_RESPONSES
@@ -95,13 +96,6 @@ async def _existing_run(
     return run_id
 
 
-def _no_transform(response: Response) -> None:
-    """FastAPI sends `no-cache`; `no-transform` also stops proxies from compressing the stream.
-    A gzipping proxy (the Next server, by default) would buffer it until the run ends. Set in a
-    dependency because a streaming endpoint's body runs after the headers are sent."""
-    response.headers["Cache-Control"] = "no-cache, no-transform"
-
-
 EVENT_ITEM_SCHEMA = {
     "type": "object",
     "properties": {
@@ -121,7 +115,7 @@ EVENT_ITEM_SCHEMA = {
     "/runs/{run_id}/stream",
     response_class=EventSourceResponse,
     responses=ERROR_RESPONSES,
-    dependencies=[Depends(_no_transform)],
+    dependencies=[Depends(no_transform)],
     openapi_extra={
         "responses": {"200": {"content": {"text/event-stream": {"itemSchema": EVENT_ITEM_SCHEMA}}}}
     },

@@ -186,3 +186,34 @@ def after_n(n: int) -> Callable[[SSEEvent], bool]:
         return seen >= n
 
     return stop
+
+
+@dataclass
+class ChatEvent:
+    event: str
+    data: dict[str, Any]
+
+
+def read_chat(
+    client: httpx.Client, url: str, body: Mapping[str, Any], timeout_s: float = 60
+) -> list[ChatEvent]:
+    """POSTs a co-working message and reads the reply stream (named SSE events) to the end."""
+    events: list[ChatEvent] = []
+    fields: dict[str, str] = {}
+    with client.stream("POST", url, json=dict(body), timeout=timeout_s) as response:
+        response.raise_for_status()
+        assert response.headers["content-type"].startswith("text/event-stream")
+        assert "no-transform" in response.headers["cache-control"]
+        for line in response.iter_lines():
+            if line == "":
+                if "data" in fields:
+                    events.append(
+                        ChatEvent(fields.get("event", "message"), json.loads(fields["data"]))
+                    )
+                fields = {}
+                continue
+            if line.startswith(":"):
+                continue
+            key, _, value = line.partition(":")
+            fields[key] = value.removeprefix(" ")
+    return events

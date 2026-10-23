@@ -30,15 +30,24 @@ class AppError(Exception):
     status_code = status.HTTP_400_BAD_REQUEST
     code = "bad_request"
 
-    def __init__(self, message: str, *, details: Any | None = None):
+    def __init__(self, message: str, *, details: Any | None = None, code: str | None = None):
         super().__init__(message)
         self.message = message
         self.details = details
+        if code is not None:
+            self.code = code
 
 
 class NotFoundError(AppError):
     status_code = status.HTTP_404_NOT_FOUND
     code = "not_found"
+
+
+class ConflictError(AppError):
+    """The request is valid but the current state forbids it, e.g. `run_not_paused`."""
+
+    status_code = status.HTTP_409_CONFLICT
+    code = "conflict"
 
 
 class ServiceUnavailableError(AppError):
@@ -49,6 +58,10 @@ class ServiceUnavailableError(AppError):
 ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     404: {"model": ErrorResponse, "description": "Not found"},
     422: {"model": ErrorResponse, "description": "Validation error"},
+}
+CONFLICT_RESPONSES: dict[int | str, dict[str, Any]] = {
+    **ERROR_RESPONSES,
+    409: {"model": ErrorResponse, "description": "Conflicts with the run's current state"},
 }
 
 

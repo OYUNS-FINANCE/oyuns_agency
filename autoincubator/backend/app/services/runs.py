@@ -15,10 +15,7 @@ from typing import Any
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agents.analyst.schemas import MarketAnalysis
 from app.agents.common.schemas import RunInput
-from app.agents.scout.schemas import RawOpportunity
-from app.agents.skeptic.schemas import CritiqueScorecard
 from app.core.config import Settings
 from app.core.errors import NotFoundError
 from app.db.enums import RunMode, RunStatus
@@ -28,10 +25,10 @@ from app.db.repositories import ideas as ideas_repo
 from app.db.repositories import profile as profile_repo
 from app.db.repositories import runs as runs_repo
 from app.events.schema import EventData, RunErrored, RunStatusChanged
+from app.services import ideas as ideas_service
 from app.services.schemas import (
     BudgetUsage,
     CreateRunRequest,
-    IdeaView,
     RunDetail,
     RunErrorInfo,
     RunList,
@@ -221,27 +218,14 @@ async def run_detail(session: AsyncSession, user_id: uuid.UUID, run_id: uuid.UUI
     run = await get_run(session, user_id, run_id)
     cost = await runs_repo.total_cost(session, run.id)
     ideas = [
-        IdeaView(
-            id=idea.id,
-            key=idea.key,
-            status=idea.status,
-            rank=idea.rank,
-            composite_score=float(idea.composite_score)
-            if idea.composite_score is not None
-            else None,
-            version=version.version,
-            version_source=version.source,
-            title=str(version.opportunity["title"]),
-            opportunity=RawOpportunity.model_validate(version.opportunity),
-            analysis=MarketAnalysis.model_validate(version.analysis),
-            critique=CritiqueScorecard.model_validate(version.critique),
-        )
+        ideas_service.to_view(idea, version)
         for idea, version in await ideas_repo.latest_for_run(session, run.id)
     ]
     return RunDetail(
         **_summary_fields(run),
         input=RunInput.model_validate(run.input),
         shortfall=run.shortfall,
+        selected_idea_id=run.selected_idea_id,
         budget=BudgetUsage(
             max_tokens=run.max_tokens,
             tokens_used=run.tokens_used,

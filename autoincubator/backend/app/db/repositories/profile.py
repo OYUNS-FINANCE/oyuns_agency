@@ -58,3 +58,25 @@ async def upsert(
     )
     assert row is not None
     return _to_schema(row), row.updated_at
+
+
+async def append_rejected_reason(
+    session: AsyncSession, user_id: uuid.UUID, reason: str, keep: int
+) -> list[str]:
+    """Adds a reason (newest last, keeping the latest `keep`), creating a default profile
+    when the founder never saved one. Returns the stored list."""
+    await session.execute(
+        insert(FounderProfileRow)
+        .values(user_id=user_id, risk_tolerance=RiskTolerance.MEDIUM)
+        .on_conflict_do_nothing(index_elements=["user_id"])
+    )
+    row = await session.scalar(
+        select(FounderProfileRow)
+        .where(FounderProfileRow.user_id == user_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    assert row is not None
+    row.rejected_idea_reasons = [*row.rejected_idea_reasons, reason][-keep:]
+    await session.flush()
+    return list(row.rejected_idea_reasons)

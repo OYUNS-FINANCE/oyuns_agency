@@ -6,13 +6,14 @@ from arq.connections import ArqRedis
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
-from app.api import health, profile, runs
+from app.api import cowork, health, profile, runs
 from app.core.config import get_settings
 from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging, get_logger
 from app.db.session import create_engine, create_sessionmaker
 from app.events.broker import EventBroker
 from app.events.schema import EVENT_ADAPTER
+from app.services.cowork_chat import ChatTasks
 
 log = get_logger(__name__)
 
@@ -29,10 +30,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.sessionmaker = create_sessionmaker(engine)
     app.state.redis = redis
     app.state.event_broker = broker
+    app.state.chat_tasks = chat_tasks = ChatTasks()
     log.info("app.startup", env=settings.app_env)
     try:
         yield
     finally:
+        await chat_tasks.shutdown()
         await broker.stop()
         await redis.aclose()
         await engine.dispose()
@@ -57,10 +60,11 @@ def _openapi_with_events(app: FastAPI) -> dict[str, Any]:
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.log_level)
-    app = FastAPI(title="AutoIncubator", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="AutoIncubator", version="0.4.0", lifespan=lifespan)
     install_error_handlers(app)
     app.include_router(health.router, prefix="/api")
     app.include_router(runs.router, prefix="/api")
+    app.include_router(cowork.router, prefix="/api")
     app.include_router(profile.router, prefix="/api")
     app.openapi = lambda: _openapi_with_events(app)  # type: ignore[method-assign]
     return app
