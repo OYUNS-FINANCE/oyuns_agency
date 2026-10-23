@@ -3,8 +3,9 @@
 Claude updates this file at the end of every phase. Newest entries go on top.
 
 ## Current phase
-Phase 4 — done; Phase 5 (Phase-2 agents, finance engine & export) next.
-Still open from Phase 1: the real-Anthropic-key CLI check (now also covers streamed chat).
+Phase 5 — done; Phase 6 (real search, evals, cost & observability) next.
+Still open from Phase 1: the real-Anthropic-key CLI check (now also covers streamed chat and
+the four Phase-2 agents).
 
 ## Phase checklist
 - [x] 0 — Skeleton & infrastructure
@@ -12,9 +13,178 @@ Still open from Phase 1: the real-Anthropic-key CLI check (now also covers strea
 - [x] 2 — Runs, persistence, worker & streaming
 - [x] 3 — Frontend: start screen & live discovery
 - [x] 4 — Co-working checkpoint (HITL)
-- [ ] 5 — Phase-2 agents, finance engine & export
+- [x] 5 — Phase-2 agents, finance engine & export
 - [ ] 6 — Real search, evals, cost & observability
 - [ ] 7 — Deployment
+
+---
+
+### Phase 5 — Phase-2 agents, finance engine & dossier export (2026-10-23)
+**Built:**
+- **Finance engine** (`services/finance.py`, pure Python):
+  - The `AssumptionSet` (`agents/financial_modeler/schemas.py`) holds the inputs: price tiers
+    and mix, paid channels (CAC, spend), organic signups and growth, free→paid, churn, the
+    payment fee, variable and fixed costs, starting cash, and the launch month. Every input is
+    a `SourcedFigure`, and the ranges are validated.
+  - The engine computes ARPA, gross margin, blended CAC, LTV, LTV:CAC and payback, plus a
+    12-month table (signups, new customers, customers, MRR, COGS, gross profit, opex, net cash
+    flow, cash). It also finds the break-even month, the cash-out month and the runway after
+    month 12.
+  - Scenarios: base, plus fixed bear/bull multipliers (`SCENARIOS`).
+  - The formulas are written out in the module docstring. Each output declares its
+    `DEPENDENCIES` and `FORMULAS`; the appendix and the UI show both.
+- **Agents:**
+  - `product_architect`, `gtm_strategist` and `financial_modeler` fan out from the
+    checkpoint; the `editor` fans in. Each has a versioned prompt, Pydantic I/O, and per-agent
+    model settings (`*_MODEL`).
+  - They read `selected_brief`, wrapped in `<idea_brief>` as untrusted data.
+  - They don't search: a `source_url` must be one the brief cites, and everything else is an
+    assumption.
+  - The Financial Modeler's validator runs the engine, so a degenerate `AssumptionSet` (no
+    revenue, no margin) is fed back to the model.
+- **Number tracing** (`services/trace.py`, `services/plan_trace.py`):
+  - A figure registry holds every source, assumption, estimate, engine output and score.
+  - A scanner checks the numbers in prose by value, at the precision they're written in.
+  - It runs in every agent's retry loop, on the brief (`untraced_number`), and on the final
+    Markdown.
+- **Editor checks** (`services/plan_checks.py`):
+  - GTM channels vs Finance channels: one-to-one, with CAC equal to the cent.
+  - The "now" features vs the build estimate, within ±20%.
+  - The launch month vs calendar build weeks (build weeks × 40 / founder weekly hours).
+  - Untraced numbers in the brief.
+  - The Editor LLM adds qualitative contradictions, the executive summary, risks and the
+    30/60/90 checklist. It can't change numbers.
+  - Contradictions are listed in the plan and the dossier, never hidden.
+- **Persistence and API:**
+  - Migration `0004` adds `business_plans` (plan JSONB, Markdown, version; unique per
+    run/version).
+  - The worker writes v1 and `run.completed {plan_version}`, then moves the status, in one
+    transaction.
+  - `GET /runs/{id}/plan` returns the plan plus the engine formulas.
+    `GET /runs/{id}/plan/export?format=md|pdf` returns an attachment. Both return 404
+    `plan_not_found` until the run completes.
+- **Export** (`services/export/`):
+  - A Jinja Markdown dossier: summary, opportunity, product, GTM, financials (three
+    12-month tables), contradictions, risks, the 30/60/90 checklist, and an appendix with
+    sources, assumptions, scenario definitions and engine formulas.
+  - The PDF goes Markdown → HTML (markdown-it, raw HTML off) → WeasyPrint 70 with print CSS
+    (page breaks, repeated table headers, page counters) and bundled Noto Sans (OFL).
+  - The URL fetcher serves only the font files.
+  - A missing Pango gives `503 pdf_unavailable`.
+- **Frontend** `/runs/[runId]/plan`:
+  - Sticky section navigation with the active section highlighted; a select below `lg`.
+  - A base/bear/bull toggle drives the KPI tiles, the 12-month table, and two inline-SVG
+    charts (MRR, cash).
+    - The scenario palette passed the dataviz validator in both themes.
+    - The charts have a legend, direct end labels, and a crosshair readout on hover or
+      keyboard.
+  - Contradiction callouts inline in their sections and in a full list. Appendix tables and
+    export links.
+  - States: loading, not ready (by run status), not found and error.
+  - The run page links completed runs to the plan. The activity panel has labels and hues
+    for the Phase-2 agents.
+- **Tests:**
+  - Backend: 188 unit (was 120) and 23 integration (was 21). New coverage:
+    - the finance reference case, scenarios, edge cases and the perturbation test
+    - the trace scanner
+    - each Phase-2 agent's retry paths
+    - the Editor checks
+    - Markdown safety, number traceability, PDF fonts and fetch blocking
+    - a live select → completed → export run over HTTP
+  - Frontend: 77 Vitest tests (was 65).
+
+**Deviations from spec (and why):**
+- **Shared channel vocabulary** (`ChannelType`). GTM and Finance run in parallel, so free-text
+  channel names would rarely match and the CAC check would be noise.
+- **The proposed fourth check ("solo feasibility")** is folded into launch timing via the
+  founder's weekly hours.
+- **Agents may restate numbers that appear in the brief's text.** Whether such a number is
+  sourced is reported once, by the Editor's `untraced_number` check. Bare years (1900–2099)
+  count as dates. This was found in the live test: a "$12M" headline made every Phase-2 agent
+  fail.
+- **An extra endpoint:** `GET /runs/{id}/plan` (structured JSON for the UI), next to the
+  export.
+- **The plan is persisted by the worker at completion**, not by the Editor node. The graph
+  stays DB-free (ADR 0006).
+
+**ADRs added:** 0007 — plan assembled in the graph and persisted at completion, number
+traceability, PDF via WeasyPrint.
+
+**Known issues / tech debt:**
+- **Not run with a real model.** The Phase-2 prompts and output schemas (notably
+  `AssumptionSet` and the number rule) need the pending real-key run. Real models estimating
+  CAC in parallel will often produce `channel_cac_mismatch` contradictions. That's by design,
+  but worth watching.
+- **A Phase-2 section that never validates fails the run** (`run_failed`). There's no
+  "retry Phase 2" action; the checkpoint keeps the completed sections.
+- **Only plan v1 is written.** There's no regenerate or edit flow.
+- **Scanner limits:** a number that coincides with some registered figure passes, and so does
+  a bare four-digit count in the year range.
+- **Pango:**
+  - On macOS: `brew install pango`, and run the API, the worker and pytest with
+    `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib`. The make targets set it inline because SIP
+    strips `DYLD_*` from `/bin/sh`.
+  - PDF tests skip on macOS without it.
+  - The Phase-7 image must install Pango.
+- **Cyrillic in the web UI:** Geist and Instrument Serif are loaded with the `latin` subset,
+  so Cyrillic titles fall back to system fonts. The PDF uses Noto Sans. Traditional Mongolian
+  script isn't covered by either.
+- **Offline fixtures:** the fake Scout's `industry` is the headline's first word ("funding:"),
+  which is cosmetic. Its signal evidence now includes the headline.
+- **The e2e script is still outside the repo**, in the session scratchpad, as in Phases 3–4.
+  This belongs in Phase 6.
+
+**Acceptance criteria:** all passed (verified by running commands):
+- **Finance engine vs a hand-calculated reference case:** `tests/unit/test_finance.py`.
+  - Unit economics and months 1–3 match by hand.
+  - Month 12 matches an independent closed form.
+  - Bear/bull multipliers, the fraction cap, cash-out and runway are covered.
+- **Changing one assumption updates every dependent number:**
+  `test_changing_one_assumption_updates_exactly_its_dependents`, parametrised over all 13
+  input groups.
+  - The declared dependents change and nothing else does; the dependency map is checked to be
+    complete.
+  - Plus a churn walk-through, and a dossier-level change of starting cash.
+- **The full run with fakes reaches `completed` with a plan:**
+  - `test_full_run_with_fakes_completes_with_a_traceable_exported_plan` (live uvicorn + arq):
+    the four `agent.started` events, with the Editor last; `run.completed {plan_version: 1}`;
+    `GET /plan`; MD and PDF exports.
+  - The CLI `--auto` then `--resume-select` prints the plan.
+  - Reading the checkpoint back in another process under strict msgpack returns a typed
+    `BusinessPlan`.
+- **Every number in the dossier traces (automated check):**
+  `test_every_number_in_the_dossier_traces_to_a_source_assumption_or_engine`. It finds zero
+  untraced numbers across about 100 money figures, and an injected "$987,654" is caught.
+  - Unsourced brief numbers are disclosed rather than hidden
+    (`test_untraced_brief_numbers_are_disclosed_in_the_dossier`).
+  - The live test runs the same check on the HTTP export.
+- **The PDF renders correctly:** rasterised with poppler and reviewed page by page.
+  - 12 A4 pages: the summary on the cover, then one section per page, with repeated table
+    headers and page counters.
+  - Cyrillic/Mongolian titles and text (Ш, Ө, Ү) render.
+  - Only Noto Sans is embedded (`pdffonts`). A wrapped "Section" column and a DejaVu fallback
+    for "≥" were found and fixed.
+  - The PDF exported from the real HTTP run checks out the same way.
+- **Browser check:** Playwright-core with headless Chrome against the real stack (worker at
+  `FAKE_LLM_LATENCY_MS=150`, `pnpm dev`): **15/15**.
+  - The plan page before the run completes.
+  - Phase-2 agents live in the activity panel, then "View business plan".
+  - All nine sections render.
+  - The scenario toggle, with the bear table equal to the engine's numbers.
+  - The chart readout lists all three scenarios.
+  - PDF and MD downloads.
+  - 375 px: no overflow, and the section select jumps to the section.
+  - No console errors.
+  - Desktop, mobile and dark-mode screenshots were reviewed.
+- **Checks:**
+  - Backend: `make check-backend` (pytest 188, `mypy --strict`, ruff), `make test-integration`
+    (23), `ruff format --check`, `alembic check` (0004 round-trips), and the OpenAPI drift
+    test.
+  - Frontend: `make check-frontend` (typecheck, lint, 77 tests), `format:check` and `build`.
+
+**Next:** Phase 6 — real search, evals, cost & observability
+(`docs/phases/06-hardening-real-search.md`). Real search would let the Phase-2 agents cite
+benchmarks.
 
 ---
 
