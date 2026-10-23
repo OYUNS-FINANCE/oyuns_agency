@@ -19,11 +19,11 @@ from typing import Any
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command
 
-from app.agents.common.brief import ResumePayload
+from app.agents.common.brief import CheckpointPayload, ResumePayload
 from app.agents.common.schemas import RunInput
 from app.core.config import get_settings
 from app.core.logging import configure_logging
-from app.graph.builder import compile_graph
+from app.graph.builder import IncubatorGraph, compile_graph
 from app.graph.checkpointer import postgres_checkpointer
 from app.graph.state import Phase1State
 from app.providers.factory import build_deps
@@ -61,6 +61,19 @@ def _run_input(args: argparse.Namespace) -> RunInput:
     )
 
 
+async def _resume_value(graph: IncubatorGraph, config: RunnableConfig, key: str) -> Any:
+    """The CLI has no application tables: it selects a brief from the interrupt snapshot by
+    its graph key (`opp-03`). The API selects from the DB instead (ADR 0006)."""
+    snapshot = await graph.aget_state(config)
+    if not snapshot.interrupts:
+        raise SystemExit(f"thread {config['configurable']['thread_id']} is not paused")
+    briefs = CheckpointPayload.model_validate(snapshot.interrupts[0].value).briefs
+    brief = next((b for b in briefs if b.idea_id == key), None)
+    if brief is None:
+        raise SystemExit(f"{key!r} is not one of {[b.idea_id for b in briefs]}")
+    return ResumePayload(idea_id=key, brief=brief).model_dump(mode="json")
+
+
 async def main(args: argparse.Namespace) -> dict[str, Any]:
     settings = get_settings()
     configure_logging(settings.log_level, stream=sys.stderr)
@@ -70,8 +83,11 @@ async def main(args: argparse.Namespace) -> dict[str, Any]:
     async with postgres_checkpointer(settings) as saver:
         graph = compile_graph(saver)
         if args.resume_select:
-            resume = ResumePayload(selected_idea_id=args.resume_select).model_dump()
-            await graph.ainvoke(Command(resume=resume), config, context=deps)
+            await graph.ainvoke(
+                Command(resume=await _resume_value(graph, config, args.resume_select)),
+                config,
+                context=deps,
+            )
         else:
             initial: Phase1State = {"run_id": thread_id, "run_input": _run_input(args)}
             await graph.ainvoke(initial, config, context=deps)

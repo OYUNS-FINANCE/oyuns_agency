@@ -33,6 +33,12 @@ class CheckpointPayload(BaseModel):
 
 
 class ResumePayload(BaseModel):
-    """The value expected in Command(resume=...)."""
+    """The value expected in Command(resume=...). See ADR 0006.
 
-    selected_idea_id: str = Field(min_length=1)
+    The worker loads the selected idea's latest version from the DB and passes it whole, so
+    edited and merged ideas (which are not in the interrupt snapshot) can be selected and
+    the graph never reads application tables.
+    """
+
+    idea_id: str = Field(min_length=1, description="Application id of the selected idea.")
+    brief: IdeaBrief

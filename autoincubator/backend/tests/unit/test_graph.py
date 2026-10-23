@@ -7,7 +7,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command
 
-from app.agents.common.brief import CheckpointPayload
+from app.agents.common.brief import CheckpointPayload, ResumePayload
 from app.graph.builder import IncubatorGraph, compile_graph
 from app.graph.deps import GraphDeps
 from app.graph.state import Phase1State
@@ -42,6 +42,11 @@ def _script(ideas: list[tuple[str, str]], critique_scores: list[int]) -> dict[st
     }
 
 
+def _select(payload: CheckpointPayload, key: str) -> dict[str, Any]:
+    brief = next(b for b in payload.briefs if b.idea_id == key)
+    return ResumePayload(idea_id=f"uuid-{key}", brief=brief).model_dump(mode="json")
+
+
 def _payload(result: dict[str, Any]) -> CheckpointPayload:
     (intr,) = result["__interrupt__"]
     return CheckpointPayload.model_validate(intr.value)
@@ -60,8 +65,9 @@ async def test_runs_to_interrupt_with_ranked_briefs_then_resumes_to_phase2_stubs
     assert snapshot.next == ("checkpoint",)
     assert not snapshot.values.get("phase2")
 
-    final = await graph.ainvoke(Command(resume={"selected_idea_id": "opp-01"}), CONFIG, context=d)
-    assert final["selected_idea_id"] == "opp-01"
+    final = await graph.ainvoke(Command(resume=_select(payload, "opp-01")), CONFIG, context=d)
+    assert final["selected_idea_id"] == "uuid-opp-01"
+    assert final["selected_brief"] == payload.briefs[1]
     assert final["phase2"] == dict.fromkeys((*PHASE2_PARALLEL, PHASE2_EDITOR), STUB_STATUS)
     assert (await graph.aget_state(CONFIG)).next == ()
     assert len(final["usage"]) == 2 + 4 + 4
@@ -104,7 +110,21 @@ async def test_enough_ideas_on_first_pass_does_not_loop() -> None:
     assert _payload(result).iterations == 1
 
 
-@pytest.mark.parametrize("bad", [{"selected_idea_id": "opp-99"}, {"wrong": "shape"}, "opp-01"])
+async def test_resume_accepts_an_edited_brief_that_is_not_in_the_snapshot() -> None:
+    d = f.deps(_script(GOOD[:3], [7, 7, 7]), agent_concurrency=1)
+    graph = _graph()
+    payload = _payload(await graph.ainvoke(_initial(), CONFIG, context=d))
+    edited = payload.briefs[0].model_copy(deep=True)
+    edited.opportunity.title = "Edited during co-working"
+    resume = ResumePayload(idea_id="merged-or-edited", brief=edited).model_dump(mode="json")
+    final = await graph.ainvoke(Command(resume=resume), CONFIG, context=d)
+    assert final["selected_brief"].opportunity.title == "Edited during co-working"
+    assert final["phase2"] == dict.fromkeys((*PHASE2_PARALLEL, PHASE2_EDITOR), STUB_STATUS)
+
+
+@pytest.mark.parametrize(
+    "bad", [{"selected_idea_id": "opp-01"}, {"idea_id": "x", "brief": {}}, "opp-01"]
+)
 async def test_invalid_selection_re_asks_and_run_stays_paused(bad: Any) -> None:
     d = f.deps(_script(GOOD[:3], [7, 7, 7]), agent_concurrency=1)
     graph = _graph()
@@ -114,8 +134,8 @@ async def test_invalid_selection_re_asks_and_run_stays_paused(bad: Any) -> None:
     assert payload.error is not None
     assert [b.idea_id for b in payload.briefs] == ["opp-01", "opp-02", "opp-03"]
     assert (await graph.aget_state(CONFIG)).next == ("checkpoint",)
-    final = await graph.ainvoke(Command(resume={"selected_idea_id": "opp-02"}), CONFIG, context=d)
-    assert final["selected_idea_id"] == "opp-02"
+    final = await graph.ainvoke(Command(resume=_select(payload, "opp-02")), CONFIG, context=d)
+    assert final["selected_brief"].idea_id == "opp-02"
 
 
 async def test_offline_responder_runs_both_modes_end_to_end() -> None:

@@ -49,5 +49,8 @@ class Phase1State(TypedDict, total=False):
     """Honest message when fewer than the minimum viable ideas were found."""
     usage: Annotated[list[UsageRecord], operator.add]
     selected_idea_id: str | None
+    """Application id (`ideas.id`) of the founder's choice."""
+    selected_brief: IdeaBrief | None
+    """The selected idea at its latest version; what Phase 2 develops."""
     phase2: Annotated[dict[str, str], merge_dict]
     """Phase-2 stub markers (node name → status) until Phase 5 replaces the stubs."""
