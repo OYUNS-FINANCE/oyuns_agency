@@ -27,16 +27,23 @@ class RunConstraints(BaseModel):
     excluded_industries: list[str] = Field(default_factory=list)
 
 
+RunModeName = Literal["seeded", "autonomous"]
+
+
+def check_seed_for_mode(mode: RunModeName, seed: str | None) -> None:
+    if mode == "seeded" and not seed:
+        raise ValueError("Mode A (seeded) requires a seed")
+    if mode == "autonomous" and seed:
+        raise ValueError("Mode B (autonomous) takes no seed")
+
+
 class RunInput(BaseModel):
-    mode: Literal["seeded", "autonomous"]
+    mode: RunModeName
     seed: str | None = Field(default=None, min_length=3, max_length=500)
     constraints: RunConstraints = Field(default_factory=RunConstraints)
     founder_profile: FounderProfile | None = None
 
     @model_validator(mode="after")
     def _seed_matches_mode(self) -> Self:
-        if self.mode == "seeded" and not self.seed:
-            raise ValueError("Mode A (seeded) requires a seed")
-        if self.mode == "autonomous" and self.seed:
-            raise ValueError("Mode B (autonomous) takes no seed")
+        check_seed_for_mode(self.mode, self.seed)
         return self
