@@ -40,3 +40,21 @@ class RiskTolerance(StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
+
+
+class CoworkAgent(StrEnum):
+    SCOUT = "scout"
+    ANALYST = "analyst"
+    SKEPTIC = "skeptic"
+
+
+class CoworkRole(StrEnum):
+    USER = "user"
+    ASSISTANT = "assistant"
+
+
+class CoworkMessageState(StrEnum):
+    PENDING = "pending"
+    """An assistant reply that is still being generated."""
+    COMPLETE = "complete"
+    FAILED = "failed"

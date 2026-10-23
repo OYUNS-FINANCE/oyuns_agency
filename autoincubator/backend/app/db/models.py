@@ -26,7 +26,16 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
-from app.db.enums import IdeaStatus, IdeaVersionSource, RiskTolerance, RunMode, RunStatus
+from app.db.enums import (
+    CoworkAgent,
+    CoworkMessageState,
+    CoworkRole,
+    IdeaStatus,
+    IdeaVersionSource,
+    RiskTolerance,
+    RunMode,
+    RunStatus,
+)
 
 
 def _enum[E: StrEnum](cls: type[E], name: str) -> Enum:
@@ -63,6 +72,8 @@ class Run(Base):
     searches_used: Mapped[int] = mapped_column(Integer, server_default="0")
     viable_count: Mapped[int | None] = mapped_column(Integer)
     shortfall: Mapped[str | None] = mapped_column(Text)
+    selected_idea_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    """The idea chosen at the checkpoint (ADR 0006). No FK: ideas already reference runs."""
     lease_owner: Mapped[str | None] = mapped_column(String(200))
     lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = _now()
@@ -88,6 +99,9 @@ class Idea(Base):
     rank: Mapped[int | None] = mapped_column(Integer)
     composite_score: Mapped[Decimal | None] = mapped_column(Numeric(4, 2))
     current_version: Mapped[int] = mapped_column(Integer)
+    merged_from: Mapped[list[str]] = mapped_column(JSONB, server_default="[]")
+    """Ids of the ideas a merged hybrid was made from."""
+    reject_reason: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = _now()
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -111,6 +125,36 @@ class IdeaVersion(Base):
     analysis: Mapped[dict[str, Any]] = mapped_column(JSONB)
     critique: Mapped[dict[str, Any]] = mapped_column(JSONB)
     composite_score: Mapped[Decimal] = mapped_column(Numeric(4, 2))
+    patch: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
+    """The JSON Patch that produced a `cowork` version from its predecessor."""
+    message_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("cowork_messages.id", ondelete="SET NULL"), unique=True
+    )
+    """The chat message whose proposal was applied; unique, so a proposal applies once."""
+    created_at: Mapped[datetime] = _now()
+
+
+class CoworkMessage(Base):
+    __tablename__ = "cowork_messages"
+    __table_args__ = (Index("ix_cowork_messages_idea_id_created_at", "idea_id", "created_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    run_id: Mapped[uuid.UUID] = _run_fk()
+    idea_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ideas.id", ondelete="CASCADE")
+    )
+    user_id: Mapped[uuid.UUID] = _user_id()
+    agent: Mapped[CoworkAgent] = mapped_column(_enum(CoworkAgent, "cowork_agent"))
+    role: Mapped[CoworkRole] = mapped_column(_enum(CoworkRole, "cowork_role"))
+    state: Mapped[CoworkMessageState] = mapped_column(
+        _enum(CoworkMessageState, "cowork_message_state")
+    )
+    content: Mapped[str] = mapped_column(Text)
+    proposed_patch: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
+    """RFC 6902 operations against the idea brief, proposed by the agent."""
+    based_on_version: Mapped[int] = mapped_column(Integer)
+    """The idea version the conversation saw when this message was written."""
+    error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = _now()
 
 
