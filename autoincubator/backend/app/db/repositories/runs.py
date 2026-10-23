@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import timedelta
 from decimal import Decimal
 from typing import Any
@@ -16,6 +17,17 @@ from app.db.models import Run, RunCost
 from app.providers.llm.base import UsageRecord
 
 ACTIVE_STATUSES = (RunStatus.QUEUED, RunStatus.RUNNING)
+
+
+@dataclass(frozen=True)
+class AgentCostRow:
+    agent: str
+    model: str
+    calls: int
+    input_tokens: int
+    output_tokens: int
+    cache_read_input_tokens: int
+    cost_usd: Decimal
 
 
 async def get(session: AsyncSession, run_id: uuid.UUID, user_id: uuid.UUID) -> Run | None:
@@ -188,3 +200,42 @@ async def total_cost(session: AsyncSession, run_id: uuid.UUID) -> Decimal:
         select(func.coalesce(func.sum(RunCost.cost_usd), 0)).where(RunCost.run_id == run_id)
     )
     return Decimal(total or 0)
+
+
+async def spent_today(session: AsyncSession) -> Decimal:
+    """Global LLM spend since 00:00 UTC, across every run and user."""
+    midnight = func.timezone("UTC", func.date_trunc("day", func.timezone("UTC", func.now())))
+    total = await session.scalar(
+        select(func.coalesce(func.sum(RunCost.cost_usd), 0)).where(RunCost.created_at >= midnight)
+    )
+    return Decimal(total or 0)
+
+
+async def cost_by_agent(session: AsyncSession, run_id: uuid.UUID) -> list[AgentCostRow]:
+    """Spend per (agent, model); sub-agents (`scout.plan`, `scout.extract`) are separate rows."""
+    rows = await session.execute(
+        select(
+            RunCost.agent,
+            RunCost.model,
+            func.count(),
+            func.sum(RunCost.input_tokens),
+            func.sum(RunCost.output_tokens),
+            func.sum(RunCost.cache_read_input_tokens),
+            func.sum(RunCost.cost_usd),
+        )
+        .where(RunCost.run_id == run_id)
+        .group_by(RunCost.agent, RunCost.model)
+        .order_by(func.sum(RunCost.cost_usd).desc())
+    )
+    return [
+        AgentCostRow(
+            agent=agent,
+            model=model,
+            calls=int(calls),
+            input_tokens=int(tin or 0),
+            output_tokens=int(tout or 0),
+            cache_read_input_tokens=int(tcache or 0),
+            cost_usd=Decimal(cost or 0),
+        )
+        for agent, model, calls, tin, tout, tcache, cost in rows.all()
+    ]

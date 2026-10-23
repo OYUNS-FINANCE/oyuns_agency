@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
+from dataclasses import asdict
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import func
@@ -17,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.common.schemas import RunInput
 from app.core.config import Settings
-from app.core.errors import NotFoundError
+from app.core.errors import NotFoundError, TooManyRequestsError
 from app.db.enums import RunMode, RunStatus
 from app.db.models import Run
 from app.db.repositories import events as events_repo
@@ -27,6 +29,7 @@ from app.db.repositories import runs as runs_repo
 from app.events.schema import EventData, RunErrored, RunStatusChanged
 from app.services import ideas as ideas_service
 from app.services.schemas import (
+    AgentCost,
     BudgetUsage,
     CreateRunRequest,
     RunDetail,
@@ -146,6 +149,15 @@ async def create_run(
 ) -> Run:
     """Inserts a queued run (and its first `run.status` event). The caller commits, then
     enqueues the worker job, so the worker always finds the row."""
+    if settings.daily_cost_cap_usd > 0:
+        spent = await runs_repo.spent_today(session)
+        if spent >= Decimal(str(settings.daily_cost_cap_usd)):
+            raise TooManyRequestsError(
+                f"The daily cost cap of ${settings.daily_cost_cap_usd:,.2f} has been reached "
+                f"(${float(spent):,.2f} spent since 00:00 UTC). Try again after midnight UTC "
+                "or raise DAILY_COST_CAP_USD.",
+                code="daily_cap_reached",
+            )
     founder_profile = None
     if request.mode == "autonomous":
         stored = await profile_repo.get(session, user_id)
@@ -214,9 +226,13 @@ async def get_run(session: AsyncSession, user_id: uuid.UUID, run_id: uuid.UUID) 
     return run
 
 
-async def run_detail(session: AsyncSession, user_id: uuid.UUID, run_id: uuid.UUID) -> RunDetail:
+async def run_detail(
+    session: AsyncSession, user_id: uuid.UUID, run_id: uuid.UUID, settings: Settings
+) -> RunDetail:
     run = await get_run(session, user_id, run_id)
     cost = await runs_repo.total_cost(session, run.id)
+    by_agent = await runs_repo.cost_by_agent(session, run.id)
+    spent_today = await runs_repo.spent_today(session)
     ideas = [
         ideas_service.to_view(idea, version)
         for idea, version in await ideas_repo.latest_for_run(session, run.id)
@@ -232,6 +248,11 @@ async def run_detail(session: AsyncSession, user_id: uuid.UUID, run_id: uuid.UUI
             max_searches=run.max_searches,
             searches_used=run.searches_used,
             cost_usd=float(cost),
+            cost_by_agent=[
+                AgentCost(**{**asdict(row), "cost_usd": float(row.cost_usd)}) for row in by_agent
+            ],
+            daily_cap_usd=settings.daily_cost_cap_usd,
+            daily_spent_usd=float(spent_today),
         ),
         ideas=ideas,
     )

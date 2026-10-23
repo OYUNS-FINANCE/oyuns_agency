@@ -97,7 +97,7 @@ async def test_sends_json_schema_and_fallbacks_and_prices_usage() -> None:
     assert "value" in call["output_config"]["format"]["schema"]["properties"]
     assert call["output_config"]["effort"] == "medium"
     assert call["betas"] == [FALLBACK_BETA] and call["fallbacks"] == "default"
-    assert call["system"] == "sys"
+    assert call["system"][0]["text"] == "sys"
     assert result.usage[0].cost_usd == pytest.approx(
         cost_usd("claude-sonnet-5-5", input_tokens=1000, output_tokens=200)
     )
@@ -129,3 +129,45 @@ async def test_streams_deltas_per_attempt_when_on_delta_is_set() -> None:
     assert all(c["streamed"] for c in messages.calls)
     assert "".join(t for t, a in seen if a == 1) == '{"value": "x"}'
     assert "".join(t for t, a in seen if a == 2) == '{"value": 12}'
+
+
+async def test_prompt_caching_marks_system_and_the_first_turn_on_retry() -> None:
+    llm, messages = _llm(_response('{"value": "x"}'), _response('{"value": 1}'))
+    await llm.generate(_request())
+    first, second = messages.calls
+    assert first["system"] == [
+        {"type": "text", "text": "sys", "cache_control": {"type": "ephemeral"}}
+    ]
+    assert first["messages"] == [{"role": "user", "content": "hi"}]  # nothing to reuse yet
+    cached = second["messages"][0]["content"]
+    assert cached == [{"type": "text", "text": "hi", "cache_control": {"type": "ephemeral"}}]
+    assert second["messages"][1]["content"] == '{"value": "x"}'
+
+
+async def test_prompt_caching_can_be_turned_off() -> None:
+    messages = StubMessages([_response('{"value": 5}')])
+    client = SimpleNamespace(beta=SimpleNamespace(messages=messages))
+    llm = AnthropicLLM(cast(AsyncAnthropic, client), prompt_caching=False)
+    await llm.generate(_request())
+    assert messages.calls[0]["system"] == "sys"
+
+
+async def test_cache_reads_and_writes_are_priced() -> None:
+    response = _response('{"value": 5}')
+    response.usage = SimpleNamespace(
+        input_tokens=100,
+        output_tokens=50,
+        cache_read_input_tokens=10_000,
+        cache_creation_input_tokens=2_000,
+    )
+    llm, _ = _llm(response)
+    result = await llm.generate(_request())
+    expected = cost_usd(
+        "claude-sonnet-5-5",
+        input_tokens=100,
+        output_tokens=50,
+        cache_read_input_tokens=10_000,
+        cache_creation_input_tokens=2_000,
+    )
+    assert result.usage[0].cost_usd == pytest.approx(expected)
+    assert result.usage[0].cache_read_input_tokens == 10_000

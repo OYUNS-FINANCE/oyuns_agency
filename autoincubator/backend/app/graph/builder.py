@@ -17,6 +17,7 @@ from app.agents.gtm_strategist.node import gtm_strategist_node
 from app.agents.product_architect.node import product_architect_node
 from app.agents.scout.node import scout_node
 from app.agents.skeptic.node import skeptic_node
+from app.core.telemetry import traced_node
 from app.graph.checkpoint import checkpoint_node
 from app.graph.deps import GraphDeps
 from app.graph.ranking import rank_node
@@ -31,15 +32,15 @@ type IncubatorGraph = CompiledStateGraph[Phase1State, GraphDeps, Phase1State, Ph
 
 def build_graph() -> StateGraph[Phase1State, GraphDeps, Phase1State, Phase1State]:
     g = StateGraph(Phase1State, context_schema=GraphDeps)
-    g.add_node("scout", scout_node)
-    g.add_node("analyst", analyst_node)
-    g.add_node("skeptic", skeptic_node)
-    g.add_node("rank", rank_node)
-    g.add_node("checkpoint", checkpoint_node)
-    g.add_node("product_architect", product_architect_node)
-    g.add_node("gtm_strategist", gtm_strategist_node)
-    g.add_node("financial_modeler", financial_modeler_node)
-    g.add_node(PHASE2_EDITOR, editor_node)
+    g.add_node("scout", traced_node("scout", scout_node))
+    g.add_node("analyst", traced_node("analyst", analyst_node))
+    g.add_node("skeptic", traced_node("skeptic", skeptic_node))
+    g.add_node("rank", traced_node("rank", rank_node))
+    g.add_node("checkpoint", checkpoint_node)  # sync, no runtime: not wrapped
+    g.add_node("product_architect", traced_node("product_architect", product_architect_node))
+    g.add_node("gtm_strategist", traced_node("gtm_strategist", gtm_strategist_node))
+    g.add_node("financial_modeler", traced_node("financial_modeler", financial_modeler_node))
+    g.add_node(PHASE2_EDITOR, traced_node(PHASE2_EDITOR, editor_node))
 
     g.add_edge(START, "scout")
     g.add_edge("scout", "analyst")

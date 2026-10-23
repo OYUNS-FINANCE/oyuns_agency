@@ -50,6 +50,22 @@ class ConflictError(AppError):
     code = "conflict"
 
 
+class TooManyRequestsError(AppError):
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    code = "rate_limited"
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        retry_after_s: int | None = None,
+        details: Any | None = None,
+        code: str | None = None,
+    ):
+        super().__init__(message, details=details, code=code)
+        self.retry_after_s = retry_after_s
+
+
 class ServiceUnavailableError(AppError):
     status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     code = "service_unavailable"
@@ -58,6 +74,7 @@ class ServiceUnavailableError(AppError):
 ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     404: {"model": ErrorResponse, "description": "Not found"},
     422: {"model": ErrorResponse, "description": "Validation error"},
+    429: {"model": ErrorResponse, "description": "Rate limit or daily cost cap reached"},
 }
 CONFLICT_RESPONSES: dict[int | str, dict[str, Any]] = {
     **ERROR_RESPONSES,
@@ -72,7 +89,10 @@ def _response(status_code: int, code: str, message: str, details: Any = None) ->
 
 async def _app_error(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, AppError)
-    return _response(exc.status_code, exc.code, exc.message, exc.details)
+    response = _response(exc.status_code, exc.code, exc.message, exc.details)
+    if isinstance(exc, TooManyRequestsError) and exc.retry_after_s is not None:
+        response.headers["Retry-After"] = str(exc.retry_after_s)
+    return response
 
 
 async def _http_error(request: Request, exc: Exception) -> JSONResponse:

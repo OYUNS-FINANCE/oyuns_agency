@@ -8,9 +8,11 @@ from dataclasses import dataclass, field
 from typing import Literal, Protocol
 
 import structlog
+from opentelemetry import trace
 from pydantic import BaseModel, ValidationError
 
 log = structlog.get_logger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 class ChatMessage(BaseModel):
@@ -116,7 +118,16 @@ class StructuredLLMProvider(abc.ABC):
         for attempt in range(1, attempts + 1):
             if self.before_call is not None:
                 await self.before_call(request.agent)
-            raw = await self._complete(request, messages, attempt)  # type: ignore[arg-type]
+            with tracer.start_as_current_span("llm.call") as span:
+                span.set_attribute("llm.agent", request.agent)
+                span.set_attribute("llm.model", request.model)
+                span.set_attribute("llm.attempt", attempt)
+                raw = await self._complete(request, messages, attempt)  # type: ignore[arg-type]
+                u = raw.usage
+                span.set_attribute("llm.input_tokens", u.input_tokens)
+                span.set_attribute("llm.output_tokens", u.output_tokens)
+                span.set_attribute("llm.cache_read_input_tokens", u.cache_read_input_tokens)
+                span.set_attribute("llm.cost_usd", u.cost_usd)
             usage.append(raw.usage)
             if self.usage_hook is not None:
                 await self.usage_hook(raw.usage)

@@ -20,6 +20,7 @@ class MemoryStore:
         self.tokens = tokens
         self.searches = searches
         self.records: list[UsageRecord] = []
+        self.spent_today = 0.0
 
     async def add_usage(self, usage: UsageRecord) -> int:
         self.records.append(usage)
@@ -29,6 +30,9 @@ class MemoryStore:
     async def add_search(self) -> int:
         self.searches += 1
         return self.searches
+
+    async def spent_today_usd(self) -> float:
+        return self.spent_today
 
 
 def _budget(
@@ -137,3 +141,36 @@ async def test_usage_is_recorded_even_when_the_caller_is_cancelled() -> None:
     await asyncio.sleep(0.1)
     assert store.tokens == 90
     assert sink.of_type(BudgetWarning) == [BudgetWarning(kind="tokens", used=90, limit=100)]
+
+
+async def test_daily_cost_cap_stops_the_next_call_and_names_the_cap() -> None:
+    sink = RecordingEventSink()
+    store = MemoryStore()
+    budget = RunBudget(
+        max_tokens=100,
+        max_searches=10,
+        tokens_used=0,
+        searches_used=0,
+        store=store,
+        events=sink,
+        daily_cap_usd=5.0,
+    )
+    store.spent_today = 4.99
+    await budget.before_llm_call("a")
+    store.spent_today = 5.0
+    with pytest.raises(BudgetExhaustedError) as exc:
+        await budget.before_llm_call("a")
+    assert exc.value.kind == "daily_cost"
+    assert (exc.value.used, exc.value.limit) == (500, 500)
+    assert "daily cost cap reached" in str(exc.value)
+    assert exc.value.event() == BudgetExhausted(kind="daily_cost", used=500, limit=500)
+
+
+async def test_daily_cap_of_zero_is_off() -> None:
+    sink = RecordingEventSink()
+    store = MemoryStore()
+    store.spent_today = 10_000.0
+    budget = RunBudget(
+        max_tokens=100, max_searches=1, tokens_used=0, searches_used=0, store=store, events=sink
+    )
+    await budget.before_llm_call("a")

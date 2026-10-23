@@ -6,6 +6,9 @@ BudgetExhaustedError. The worker then records `budget.exhausted`, `run.error` an
 `budget_exhausted` status in one transaction. (Emitting from here would race: parallel
 siblings are cancelled as soon as one of them raises.)
 
+The global daily USD cap (ADR 0008) is checked before every LLM attempt as well; reaching it
+stops the run the same way, with a message that says it was the daily cap.
+
 Parallel calls that pass the check together may overshoot a cap by at most one call each
 (bounded by AGENT_CONCURRENCY).
 """
@@ -24,7 +27,12 @@ WARNING_RATIO = 0.8
 
 class BudgetExhaustedError(RuntimeError):
     def __init__(self, kind: BudgetKind, used: int, limit: int):
-        super().__init__(f"{kind} budget exhausted: used {used} of {limit}")
+        if kind == "daily_cost":
+            super().__init__(
+                f"daily cost cap reached: ${used / 100:,.2f} spent today of ${limit / 100:,.2f}"
+            )
+        else:
+            super().__init__(f"{kind} budget exhausted: used {used} of {limit}")
         self.kind: BudgetKind = kind
         self.used = used
         self.limit = limit
@@ -38,6 +46,9 @@ class UsageStore(Protocol):
 
     async def add_usage(self, usage: UsageRecord) -> int: ...
     async def add_search(self) -> int: ...
+    async def spent_today_usd(self) -> float:
+        """LLM spend of every run since 00:00 UTC (the global daily cap)."""
+        ...
 
 
 class RunBudget:
@@ -50,11 +61,13 @@ class RunBudget:
         searches_used: int,
         store: UsageStore,
         events: EventSink,
+        daily_cap_usd: float = 0.0,
     ):
         self.limits: dict[BudgetKind, int] = {"tokens": max_tokens, "searches": max_searches}
         self.used: dict[BudgetKind, int] = {"tokens": tokens_used, "searches": searches_used}
         self.store = store
         self.events = events
+        self.daily_cap_usd = daily_cap_usd
         # Already past the threshold (e.g. after a worker restart): the warning was sent.
         self._warned: set[BudgetKind] = {k for k in self.limits if self._over_warning(k)}
 
@@ -74,6 +87,18 @@ class RunBudget:
 
     async def before_llm_call(self, agent: str) -> None:
         await self._check("tokens")
+        await self._check_daily_cost()
+
+    async def _check_daily_cost(self) -> None:
+        """The global cap, read from run_costs on every call so that all runs and workers
+        share it. Costs one indexed SUM per LLM call, negligible beside the call."""
+        if self.daily_cap_usd <= 0:
+            return
+        spent = await self.store.spent_today_usd()
+        if spent >= self.daily_cap_usd:
+            raise BudgetExhaustedError(
+                "daily_cost", round(spent * 100), round(self.daily_cap_usd * 100)
+            )
 
     async def record_usage(self, usage: UsageRecord) -> None:
         # Shielded: a sibling call hitting the cap cancels this task, but money already

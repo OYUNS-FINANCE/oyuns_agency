@@ -41,6 +41,9 @@ def base_env(queue: str, **overrides: str) -> dict[str, str]:
         "RUN_LEASE_TTL_S": "2",
         "SSE_POLL_INTERVAL_S": "1",
         "LOG_LEVEL": "INFO",
+        # Tests create far more runs than a person would; the limiter has its own tests.
+        "RATE_LIMIT_ENABLED": "false",
+        "DAILY_COST_CAP_USD": "0",
         **overrides,
     }
 

@@ -53,12 +53,27 @@ class RunErrorInfo(BaseModel):
     message: str
 
 
+class AgentCost(BaseModel):
+    agent: str
+    model: str
+    calls: int
+    input_tokens: int
+    output_tokens: int
+    cache_read_input_tokens: int
+    cost_usd: float
+
+
 class BudgetUsage(BaseModel):
     max_tokens: int
     tokens_used: int
     max_searches: int
     searches_used: int
     cost_usd: float
+    cost_by_agent: list[AgentCost] = []
+    """Spend per agent and model, most expensive first."""
+    daily_cap_usd: float = 0.0
+    """The global daily USD cap (0 = off) and what has been spent today, across all runs."""
+    daily_spent_usd: float = 0.0
 
 
 class RunSummary(BaseModel):

@@ -11,12 +11,13 @@ from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_id, get_session
+from app.api.ratelimit import limit_api
 from app.core.errors import ERROR_RESPONSES, ErrorResponse
 from app.services import plans as plans_service
 from app.services.plans import ExportFormat
 from app.services.schemas import PlanResponse
 
-router = APIRouter(prefix="/incubator", tags=["plans"])
+router = APIRouter(prefix="/incubator", tags=["plans"], dependencies=[Depends(limit_api)])
 
 Session = Annotated[AsyncSession, Depends(get_session)]
 UserId = Annotated[uuid.UUID, Depends(get_current_user_id)]

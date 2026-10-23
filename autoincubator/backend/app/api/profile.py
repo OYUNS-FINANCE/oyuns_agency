@@ -8,11 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.common.schemas import FounderProfile
 from app.api.deps import get_current_user_id, get_session
+from app.api.ratelimit import limit_api
 from app.core.errors import ERROR_RESPONSES
 from app.services import profile as profile_service
 from app.services.schemas import ProfileResponse
 
-router = APIRouter(prefix="/incubator", tags=["profile"])
+router = APIRouter(prefix="/incubator", tags=["profile"], dependencies=[Depends(limit_api)])
 
 Session = Annotated[AsyncSession, Depends(get_session)]
 UserId = Annotated[uuid.UUID, Depends(get_current_user_id)]

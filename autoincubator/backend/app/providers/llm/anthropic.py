@@ -10,6 +10,7 @@ from anthropic import AsyncAnthropic, transform_schema
 from anthropic.types.beta import (
     BetaAssistantMessageParam,
     BetaMessageParam,
+    BetaTextBlockParam,
     BetaUserMessageParam,
 )
 from pydantic import BaseModel
@@ -38,6 +39,7 @@ class AnthropicLLM(StructuredLLMProvider):
         client: AsyncAnthropic,
         *,
         effort: Effort = "medium",
+        prompt_caching: bool = True,
         max_validation_retries: int = 2,
         usage_hook: UsageHook | None = None,
         before_call: BeforeCallHook | None = None,
@@ -49,6 +51,7 @@ class AnthropicLLM(StructuredLLMProvider):
         )
         self.client = client
         self.effort = effort
+        self.prompt_caching = prompt_caching
         self._schemas: dict[type[BaseModel], dict[str, Any]] = {}
 
     def _schema(self, output_type: type[BaseModel]) -> dict[str, Any]:
@@ -65,10 +68,32 @@ class AnthropicLLM(StructuredLLMProvider):
             else BetaAssistantMessageParam(role="assistant", content=m.content)
             for m in messages
         ]
+        system: str | list[BetaTextBlockParam] = request.system
+        if self.prompt_caching:
+            # The system prompt is identical across every call of an agent; a validation
+            # retry also resends the whole first user turn (the search results), so that is
+            # cached from the second attempt on. Prompts below the model's minimum cacheable
+            # length are simply not cached.
+            system = [
+                BetaTextBlockParam(
+                    type="text", text=request.system, cache_control={"type": "ephemeral"}
+                )
+            ]
+            if len(params) > 1 and messages[0].role == "user":
+                params[0] = BetaUserMessageParam(
+                    role="user",
+                    content=[
+                        BetaTextBlockParam(
+                            type="text",
+                            text=messages[0].content,
+                            cache_control={"type": "ephemeral"},
+                        )
+                    ],
+                )
         kwargs: dict[str, Any] = {
             "model": request.model,
             "max_tokens": request.max_tokens,
-            "system": request.system,
+            "system": system,
             "messages": params,
             "output_config": {
                 "effort": self.effort,

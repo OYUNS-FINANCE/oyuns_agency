@@ -11,8 +11,8 @@ from app.providers.dedup import JaccardDeduplicator
 from app.providers.llm.anthropic import AnthropicLLM
 from app.providers.llm.base import BeforeCallHook, LLMProvider, UsageHook
 from app.providers.llm.fake import FakeLLM, offline_responder
-from app.providers.search.base import CachedSearchProvider, SearchCache, SearchHook
-from app.providers.search.mock import MockSearchProvider
+from app.providers.search.base import CachedSearchProvider, ResultStore, SearchCache, SearchHook
+from app.providers.search.factory import build_search
 
 
 def build_llm(
@@ -33,6 +33,7 @@ def build_llm(
     client = AsyncAnthropic(api_key=key) if key else AsyncAnthropic()
     return AnthropicLLM(
         client,
+        prompt_caching=settings.llm_prompt_caching,
         max_validation_retries=settings.llm_max_validation_retries,
         usage_hook=usage_hook,
         before_call=before_call,
@@ -45,6 +46,7 @@ def build_deps(
     *,
     before_call: BeforeCallHook | None = None,
     search_cache: SearchCache | None = None,
+    result_store: ResultStore | None = None,
     before_search: SearchHook | None = None,
     after_search: SearchHook | None = None,
     events: EventSink | None = None,
@@ -53,7 +55,7 @@ def build_deps(
     return GraphDeps(
         llm=build_llm(settings, usage_hook, before_call),
         search=CachedSearchProvider(
-            MockSearchProvider(),
+            build_search(settings, result_store),
             search_cache,
             before_search=before_search,
             after_search=after_search,

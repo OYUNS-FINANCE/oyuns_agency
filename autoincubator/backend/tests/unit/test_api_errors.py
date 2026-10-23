@@ -5,9 +5,10 @@ from collections.abc import AsyncIterator
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
-from app.api.deps import get_arq, get_session
+from app.api.deps import get_arq, get_redis, get_session
 from app.core.errors import NotFoundError
 from app.main import create_app
+from tests.fakes import FakeRedis
 
 
 async def _no_session() -> AsyncIterator[None]:
@@ -18,6 +19,7 @@ def _app() -> FastAPI:
     app = create_app()
     app.dependency_overrides[get_session] = _no_session
     app.dependency_overrides[get_arq] = lambda: None
+    app.dependency_overrides[get_redis] = lambda: FakeRedis()
 
     @app.get("/boom")
     async def boom() -> None:

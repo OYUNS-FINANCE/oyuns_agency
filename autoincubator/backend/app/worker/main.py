@@ -8,7 +8,9 @@ from arq.connections import RedisSettings
 
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
+from app.core.telemetry import run_span, setup_tracing, shutdown_tracing
 from app.db.session import create_engine, create_sessionmaker
+from app.providers.search.factory import aclose_shared_clients
 from app.worker import cowork as cowork_jobs
 from app.worker.runs import WorkerRuntime, execute_run, recover_stale_runs
 
@@ -25,17 +27,22 @@ async def ping(ctx: dict[str, Any]) -> str:
 
 async def start_run(ctx: dict[str, Any], run_id: str) -> str:
     rt: WorkerRuntime = ctx["runtime"]
-    return await execute_run(rt, uuid.UUID(run_id), str(ctx["job_id"]))
+    with run_span("worker.start_run", run_id, job_id=str(ctx["job_id"])):
+        return await execute_run(rt, uuid.UUID(run_id), str(ctx["job_id"]))
 
 
 async def rescore_idea(ctx: dict[str, Any], run_id: str, idea_id: str) -> str:
     rt: WorkerRuntime = ctx["runtime"]
-    return await cowork_jobs.rescore_idea(rt, uuid.UUID(run_id), uuid.UUID(idea_id))
+    with run_span("worker.rescore_idea", run_id, idea_id=idea_id):
+        return await cowork_jobs.rescore_idea(rt, uuid.UUID(run_id), uuid.UUID(idea_id))
 
 
 async def merge_ideas(ctx: dict[str, Any], run_id: str, idea_ids: list[str]) -> str:
     rt: WorkerRuntime = ctx["runtime"]
-    return await cowork_jobs.merge_ideas(rt, uuid.UUID(run_id), [uuid.UUID(i) for i in idea_ids])
+    with run_span("worker.merge_ideas", run_id):
+        return await cowork_jobs.merge_ideas(
+            rt, uuid.UUID(run_id), [uuid.UUID(i) for i in idea_ids]
+        )
 
 
 async def recover_runs(ctx: dict[str, Any]) -> int:
@@ -45,7 +52,8 @@ async def recover_runs(ctx: dict[str, Any]) -> int:
 
 async def startup(ctx: dict[str, Any]) -> None:
     s = get_settings()
-    configure_logging(s.log_level)
+    configure_logging(s.log_level, service="worker")
+    setup_tracing(s, "worker")
     engine = create_engine(s.database_url)
     worker_id = f"{socket.gethostname()}:{os.getpid()}:{uuid.uuid4().hex[:6]}"
     ctx["runtime"] = WorkerRuntime(
@@ -58,7 +66,9 @@ async def shutdown(ctx: dict[str, Any]) -> None:
     rt: WorkerRuntime | None = ctx.get("runtime")
     if rt is not None:
         await rt.engine.dispose()
+    await aclose_shared_clients()
     log.info("worker.shutdown")
+    shutdown_tracing()
 
 
 class WorkerSettings:

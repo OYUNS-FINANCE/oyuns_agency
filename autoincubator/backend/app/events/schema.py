@@ -117,7 +117,8 @@ class IdeaUpdated(EventData):
 
 # --- Budget -----------------------------------------------------------------------------
 
-BudgetKind = Literal["tokens", "searches"]
+BudgetKind = Literal["tokens", "searches", "daily_cost"]
+"""`daily_cost` is the global daily USD cap; its `used` and `limit` are in US cents."""
 
 
 class BudgetWarning(EventData):

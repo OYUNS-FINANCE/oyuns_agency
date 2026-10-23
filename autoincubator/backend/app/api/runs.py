@@ -20,6 +20,7 @@ from app.api.deps import (
     get_sessionmaker,
     no_transform,
 )
+from app.api.ratelimit import limit_api, limit_create_run
 from app.core.config import Settings
 from app.core.errors import ERROR_RESPONSES
 from app.core.logging import get_logger
@@ -31,7 +32,7 @@ from app.services import runs as runs_service
 from app.services.runs import START_RUN
 from app.services.schemas import CreateRunRequest, CreateRunResponse, RunDetail, RunList
 
-router = APIRouter(prefix="/incubator", tags=["runs"])
+router = APIRouter(prefix="/incubator", tags=["runs"], dependencies=[Depends(limit_api)])
 log = get_logger(__name__)
 
 STREAM_BATCH = 500
@@ -47,6 +48,7 @@ AppSettings = Annotated[Settings, Depends(get_app_settings)]
     status_code=status.HTTP_202_ACCEPTED,
     response_model=CreateRunResponse,
     responses=ERROR_RESPONSES,
+    dependencies=[Depends(limit_create_run)],
 )
 async def create_run(
     body: CreateRunRequest,
@@ -80,8 +82,10 @@ async def list_runs(
 
 
 @router.get("/runs/{run_id}", response_model=RunDetail, responses=ERROR_RESPONSES)
-async def get_run(run_id: uuid.UUID, session: Session, user_id: UserId) -> RunDetail:
-    return await runs_service.run_detail(session, user_id, run_id)
+async def get_run(
+    run_id: uuid.UUID, session: Session, user_id: UserId, settings: AppSettings
+) -> RunDetail:
+    return await runs_service.run_detail(session, user_id, run_id, settings)
 
 
 async def _existing_run(

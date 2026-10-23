@@ -14,6 +14,7 @@ from app.core.config import Settings
 from app.db.models import Run
 from app.db.repositories import runs as runs_repo
 from app.db.repositories.search_cache import PostgresSearchCache
+from app.db.repositories.search_results import PostgresResultCache
 from app.events.publisher import PostgresEventSink
 from app.graph.deps import GraphDeps
 from app.providers.factory import build_deps
@@ -37,6 +38,10 @@ class PostgresUsageStore:
         async with self.sessionmaker() as session, session.begin():
             return await runs_repo.add_search(session, self.run_id)
 
+    async def spent_today_usd(self) -> float:
+        async with self.sessionmaker() as session:
+            return float(await runs_repo.spent_today(session))
+
 
 def run_deps(
     settings: Settings, sessionmaker: async_sessionmaker[AsyncSession], run: Run
@@ -49,12 +54,14 @@ def run_deps(
         searches_used=run.searches_used,
         store=PostgresUsageStore(sessionmaker, run.id, run.user_id),
         events=events,
+        daily_cap_usd=settings.daily_cost_cap_usd,
     )
     deps = build_deps(
         settings,
         budget.record_usage,
         before_call=budget.before_llm_call,
         search_cache=PostgresSearchCache(sessionmaker, run.id, run.user_id),
+        result_store=PostgresResultCache(sessionmaker, settings.search_cache_ttl_s),
         before_search=budget.before_search,
         after_search=budget.record_search,
         events=events,

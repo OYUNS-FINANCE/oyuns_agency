@@ -5,9 +5,14 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import Protocol
 
+import structlog
+from opentelemetry import trace
 from pydantic import BaseModel
 
 from app.core.types import WebUrl
+
+log = structlog.get_logger(__name__)
+tracer = trace.get_tracer(__name__)
 
 
 class SearchResult(BaseModel):
@@ -67,13 +72,56 @@ class CachedSearchProvider:
 
     async def search(self, query: str, *, max_results: int = 5) -> list[SearchResult]:
         key = normalise_query(query)
-        cached = await self.cache.get(key, max_results)
-        if cached is not None:
-            return cached
-        if self.before_search is not None:
-            await self.before_search(key)
+        with tracer.start_as_current_span("search") as span:
+            span.set_attribute("search.query", key[:200])
+            cached = await self.cache.get(key, max_results)
+            if cached is not None:
+                span.set_attribute("search.run_cache_hit", True)
+                span.set_attribute("search.result_count", len(cached))
+                return cached
+            span.set_attribute("search.run_cache_hit", False)
+            if self.before_search is not None:
+                await self.before_search(key)
+            results = await self.inner.search(query, max_results=max_results)
+            if self.after_search is not None:
+                await self.after_search(key)
+            await self.cache.put(key, max_results, results)
+            span.set_attribute("search.result_count", len(results))
+            return results
+
+
+class ResultStore(Protocol):
+    """Cross-run store of provider answers, keyed by provider and normalised query."""
+
+    async def get(
+        self, provider: str, query_norm: str, max_results: int
+    ) -> list[SearchResult] | None: ...
+    async def put(
+        self, provider: str, query_norm: str, max_results: int, results: list[SearchResult]
+    ) -> None: ...
+
+
+class StoredSearchProvider:
+    """Serves repeated queries from a `ResultStore` (across runs, within its TTL) and stores
+    what the provider returns. A store failure is logged and never fails the search."""
+
+    def __init__(self, inner: SearchProvider, store: ResultStore, provider_name: str):
+        self.inner = inner
+        self.store = store
+        self.provider_name = provider_name
+
+    async def search(self, query: str, *, max_results: int = 5) -> list[SearchResult]:
+        key = normalise_query(query)
+        try:
+            hit = await self.store.get(self.provider_name, key, max_results)
+        except Exception:
+            log.warning("search.store_read_failed", exc_info=True)
+            hit = None
+        if hit is not None:
+            return hit
         results = await self.inner.search(query, max_results=max_results)
-        if self.after_search is not None:
-            await self.after_search(key)
-        await self.cache.put(key, max_results, results)
+        try:
+            await self.store.put(self.provider_name, key, max_results, results)
+        except Exception:
+            log.warning("search.store_write_failed", exc_info=True)
         return results

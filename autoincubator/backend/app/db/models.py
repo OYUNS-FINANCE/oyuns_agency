@@ -185,6 +185,22 @@ class SearchCacheEntry(Base):
     created_at: Mapped[datetime] = _now()
 
 
+class SearchResultCache(Base):
+    """Cross-run cache of provider answers (ADR 0008), expired by `search_cache_ttl_s`."""
+
+    __tablename__ = "search_result_cache"
+    __table_args__ = (UniqueConstraint("provider", "query_norm", "max_results"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    provider: Mapped[str] = mapped_column(String(40))
+    query_norm: Mapped[str] = mapped_column(Text)
+    max_results: Mapped[int] = mapped_column(Integer)
+    results: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
+    fetched_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
 class RunCost(Base):
     __tablename__ = "run_costs"
 
@@ -201,7 +217,9 @@ class RunCost(Base):
     cache_creation_input_tokens: Mapped[int] = mapped_column(Integer)
     cost_usd: Mapped[Decimal] = mapped_column(Numeric(12, 6))
     attempt: Mapped[int] = mapped_column(Integer)
-    created_at: Mapped[datetime] = _now()
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
 
 
 class FounderProfileRow(Base):

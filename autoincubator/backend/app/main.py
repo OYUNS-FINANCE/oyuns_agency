@@ -7,12 +7,15 @@ from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
 from app.api import cowork, health, plans, profile, runs
+from app.api.middleware import RequestContextMiddleware
 from app.core.config import get_settings
 from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging, get_logger
+from app.core.telemetry import setup_tracing, shutdown_tracing
 from app.db.session import create_engine, create_sessionmaker
 from app.events.broker import EventBroker
 from app.events.schema import EVENT_ADAPTER
+from app.providers.search.factory import aclose_shared_clients
 from app.services.cowork_chat import ChatTasks
 from app.services.schemas import CoworkDelta, CoworkFailed, CoworkStarted
 
@@ -37,10 +40,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         yield
     finally:
         await chat_tasks.shutdown()
+        await aclose_shared_clients()
         await broker.stop()
         await redis.aclose()
         await engine.dispose()
         log.info("app.shutdown")
+        shutdown_tracing()
 
 
 CHAT_STREAM_MODELS = (CoworkStarted, CoworkDelta, CoworkFailed)
@@ -67,9 +72,12 @@ def _openapi_with_events(app: FastAPI) -> dict[str, Any]:
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    configure_logging(settings.log_level)
+    configure_logging(settings.log_level, service="api")
+    tracing = setup_tracing(settings, "api")
+    log.info("app.tracing", enabled=tracing)
     app = FastAPI(title="AutoIncubator", version="0.4.0", lifespan=lifespan)
     install_error_handlers(app)
+    app.add_middleware(RequestContextMiddleware)
     app.include_router(health.router, prefix="/api")
     app.include_router(runs.router, prefix="/api")
     app.include_router(cowork.router, prefix="/api")

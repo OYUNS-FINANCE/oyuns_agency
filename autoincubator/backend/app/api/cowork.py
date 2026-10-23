@@ -21,6 +21,7 @@ from app.api.deps import (
     get_sessionmaker,
     no_transform,
 )
+from app.api.ratelimit import limit_api, limit_llm
 from app.core.config import Settings
 from app.core.errors import CONFLICT_RESPONSES, ERROR_RESPONSES
 from app.core.logging import get_logger
@@ -41,7 +42,9 @@ from app.services.schemas import (
     SelectResponse,
 )
 
-router = APIRouter(prefix="/incubator/runs/{run_id}", tags=["cowork"])
+router = APIRouter(
+    prefix="/incubator/runs/{run_id}", tags=["cowork"], dependencies=[Depends(limit_api)]
+)
 log = get_logger(__name__)
 
 Session = Annotated[AsyncSession, Depends(get_session)]
@@ -91,7 +94,7 @@ async def _open_chat(
     "/ideas/{idea_id}/cowork",
     response_class=EventSourceResponse,
     responses=CONFLICT_RESPONSES,
-    dependencies=[Depends(no_transform)],
+    dependencies=[Depends(no_transform), Depends(limit_llm)],
     openapi_extra={
         "responses": {
             "200": {
@@ -156,6 +159,7 @@ async def apply_version(
 
 @router.post(
     "/ideas/{idea_id}/rescore",
+    dependencies=[Depends(limit_llm)],
     response_model=JobAccepted,
     responses=CONFLICT_RESPONSES,
     status_code=status.HTTP_202_ACCEPTED,
@@ -195,6 +199,7 @@ async def reject(
 
 @router.post(
     "/ideas/merge",
+    dependencies=[Depends(limit_llm)],
     response_model=JobAccepted,
     responses=CONFLICT_RESPONSES,
     status_code=status.HTTP_202_ACCEPTED,
@@ -219,6 +224,7 @@ async def merge(
 
 @router.post(
     "/select",
+    dependencies=[Depends(limit_llm)],
     response_model=SelectResponse,
     responses=CONFLICT_RESPONSES,
     status_code=status.HTTP_202_ACCEPTED,

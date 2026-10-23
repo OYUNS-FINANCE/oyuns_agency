@@ -21,15 +21,21 @@ dependencies = [
     "weasyprint==70.0",
     "jinja2==3.1.6",
     "markdown-it-py==4.2.0",
+    "httpx==0.28.1",
+    "opentelemetry-api==1.45.1",
+    "opentelemetry-sdk==1.45.1",
+    "opentelemetry-exporter-otlp-proto-http==1.45.1",
 ]
 
 [dependency-groups]
 dev = [
-    "httpx==0.28.1",
     "mypy==2.4.0",
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
     "ruff==0.17.2",
+]
+evals = [
+    "fastembed>=0.9.0",
 ]
 
 [tool.uv]
