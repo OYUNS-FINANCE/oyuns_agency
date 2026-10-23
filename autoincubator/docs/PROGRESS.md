@@ -3,18 +3,159 @@
 Claude updates this file at the end of every phase. Newest entries go on top.
 
 ## Current phase
-Phase 3 — done; Phase 4 (co-working checkpoint, HITL) next.
-Still open from Phase 1: the real-Anthropic-key CLI check.
+Phase 4 — done; Phase 5 (Phase-2 agents, finance engine & export) next.
+Still open from Phase 1: the real-Anthropic-key CLI check (now also covers streamed chat).
 
 ## Phase checklist
 - [x] 0 — Skeleton & infrastructure
 - [x] 1 — Phase-1 graph core (offline) — real-key CLI run pending
 - [x] 2 — Runs, persistence, worker & streaming
 - [x] 3 — Frontend: start screen & live discovery
-- [ ] 4 — Co-working checkpoint (HITL)
+- [x] 4 — Co-working checkpoint (HITL)
 - [ ] 5 — Phase-2 agents, finance engine & export
 - [ ] 6 — Real search, evals, cost & observability
 - [ ] 7 — Deployment
+
+---
+
+### Phase 4 — Co-working checkpoint, HITL (2026-10-23)
+**Built:**
+- **ADR 0006:** co-working runs outside the paused graph; versions live in the DB. Select
+  resumes with `Command(resume={idea_id, brief})`: the worker loads the latest version, and
+  the graph stores it as `selected_brief` (Phase 5 reads that). The CLI's
+  `--resume-select` builds the brief from the interrupt snapshot.
+- **Migration `0003`:** `cowork_messages` (agent, role, `pending/complete/failed`, content,
+  `proposed_patch`, `based_on_version`), `runs.selected_idea_id`, `ideas.merged_from` and
+  `ideas.reject_reason`, and `idea_versions.patch` / `message_id` (unique, so a proposal
+  applies once).
+- **Agent** (`agents/cowork`): Scout, Analyst and Skeptic personas share rules and return
+  `{reply, edits}`. Edits are JSON Patch operations whose values travel JSON-encoded, so the
+  output schema stays plain. The patch is applied and validated inside the retry loop. The
+  brief is wrapped in `<idea_brief>` delimiters and treated as untrusted.
+- **Patches** (`services/brief_patch.py`): RFC 6902 `add`/`replace`/`remove`, on
+  `/opportunity` and `/analysis` only (ids are read-only, and the critique changes only
+  through a re-score). The result must re-validate (`SourcedFigure`, SOM ≤ SAM ≤ TAM), may
+  cite only URLs the idea already cites, and must change something.
+- **Streaming:** `LLMRequest.on_delta`. Anthropic uses `beta.messages.stream`; `FakeLLM`
+  sends its output in chunks. `ReplyStreamReader` pulls the `reply` string out of the
+  partial JSON, and a validation retry sends `reset`.
+- **API** (`api/cowork.py`), all under `/api/incubator/runs/{run_id}`:
+  - Reads: `GET ideas/{id}` (all versions) and `GET ideas/{id}/cowork` (messages).
+  - `POST ideas/{id}/cowork`: SSE `started`/`delta`/`reset`/`completed`/`error`.
+  - `POST ideas/{id}/versions`: 201, or 200 when the proposal was already applied.
+  - `POST ideas/{id}/rescore` and `POST ideas/merge`: 202, run as worker jobs.
+  - `POST ideas/{id}/reject`.
+  - `POST select`: 202, idempotent.
+  - Every mutation row-locks the run, then the idea, and returns 409 `run_not_paused` unless
+    the run is `awaiting_human`. The other 409 codes are `idea_not_active`,
+    `reply_in_progress`, `patch_conflict` and `budget_exhausted`.
+- **Chat:** the user message and a `pending` reply are stored first. The reply is generated
+  in a task that isn't bound to the request, so a disconnect or reload still stores it. A
+  pending reply older than `COWORK_REPLY_TIMEOUT_S` is reported as failed.
+- **Worker jobs** (`worker/cowork.py`):
+  - `rescore_idea`: the Skeptic scores the latest version, and a `rescore` version is written.
+    It is dropped if the idea changed meanwhile.
+  - `merge_ideas`: Scout synthesis (signals only from the source ideas), then Analyst (with
+    searches) and Skeptic, then a `merge` idea `mrg-NN` with `merged_from`.
+  - Both stream `agent.*` and `idea.*` events, re-check `awaiting_human` under the run lock
+    before writing, and recompute ranks in Python.
+  - `start_run` resumes a selected run. Crash recovery covers the resume as well.
+- **Reject:** `"<title>: <reason>"` is appended to `founder_profile.rejected_idea_reasons`
+  (newest `REJECTED_REASONS_MAX`). Mode B snapshots it into the Scout context.
+- **Budget:** co-working calls are charged to the run budget through the shared
+  `services/run_deps.py`.
+- **Events:** `idea.updated` gains `status` and `source`; `agent.started` and
+  `agent.completed` gain an optional `idea_id`. The chat-stream payloads are published in
+  `openapi.json`.
+- **Frontend:**
+  - **Drawer** (base-ui Dialog as a side sheet; Tabs, AlertDialog, Checkbox): Chat (agent
+    picker, streamed reply, "Apply change"), Versions (side-by-side field diff with
+    word-level highlights) and Scorecard (rubric with justifications, every figure with its
+    source or assumption, signals).
+  - **Drawer state** lives in the URL (`?idea&tab&agent`), and the content is re-read from
+    the server.
+  - **Cards:** a Co-work button and badges (score out of date, re-scoring, rejected,
+    selected, hybrid).
+  - **Merge:** a selection mode with a confirm dialog.
+  - **Develop Full Business Plan:** asks for confirmation; double clicks send one request.
+  - **In-flight state:** re-score and merge progress is derived from the event log, so it
+    survives a reload.
+- **Tests:**
+  - Backend: 120 unit (was 93) and 21 integration (was 12). New coverage: patch rules,
+    stream reader, chat retry/reset, Anthropic streaming, in-process double select racing
+    resume and recovery jobs, edited brief reaching the graph, reject → Mode B Scout prompt,
+    409s, budget, and a live HTTP suite.
+  - Frontend: 65 Vitest tests (was 49).
+
+**Deviations from spec (and why):**
+- **Resume reads the latest version in the worker, not in the graph** (revises SPEC §6).
+  The graph then never touches application tables, and its replayed resume value is stable.
+- **Resume payload:** `{idea_id, brief}` (DB UUID plus the full brief), not
+  `{"idea_id": key}`.
+- **Chat runs in the API process**, which is allowed because it isn't a graph. Re-score and
+  merge run in the worker, as the phase file asks for merge.
+- **Merge keeps the sources** active and selectable (agreed in the plan).
+- **Re-score and merge jobs aren't retried** (`max_tries=1`): a partial retry would pay
+  twice. A double-clicked merge creates two hybrids. The UI prevents it, but the API doesn't.
+- **Chat has no search tool.** That's why patches may only cite existing sources (ADR 0006).
+
+**ADRs added:** 0006 — co-working outside the paused graph; DB versions; resume with the
+selected brief.
+
+**Known issues / tech debt:**
+- **One reply task per API process.** A reply in flight when the API stops shows as failed
+  once `COWORK_REPLY_TIMEOUT_S` has passed, not immediately.
+- **Lost co-working jobs:** a re-score or merge whose worker dies leaves no result. The UI
+  stops showing "working" after 20 minutes.
+- **Recovery notice:** after a select, the recovery sweep can occasionally claim the run
+  before the `resume:` job does. It then emits the "Recovered…" notice. That's cosmetic;
+  the run still resumes once.
+- **Chat history** sent to the model is capped at 40 messages.
+- **E2E script still outside the repo:** the Phase-4 Playwright-core script lives in the
+  session scratchpad, like Phase 3's. This belongs in Phase 6.
+- **Test data in the dev DB:** more test runs from verification, and the dev profile now
+  holds e2e rejection reasons (clear them in `/settings/profile`).
+
+**Acceptance criteria:** all passed (verified by running commands):
+- **Setup:** a Playwright-core script drove headless Chrome against the real stack (uvicorn
+  + arq worker with `FAKE_LLM_LATENCY_MS=150`, `pnpm dev`): **18/18 checks** on the final
+  run.
+- **Chat → apply patch → v2 with a diff → re-score updates the card:**
+  - E2E: partial reply text appears before completion, "Applied as v2", the stale badge
+    shows, and the Versions diff shows the edited one-liner. After re-score the card shows
+    v3 with the new score and no stale badge.
+  - `test_chat_apply_patch_then_rescore_updates_the_card` (live HTTP) covers the same flow.
+- **Merge creates a new scored idea, streamed live:**
+  - E2E: the "Merging ideas…" banner, then a "Hybrid of 2" card with a score.
+  - `test_merge_creates_a_new_scored_idea_streamed_live`: `agent.started` (scout), Analyst
+    tool calls, `idea.created` `mrg-01`, 7 rubric scores, and ranks re-computed.
+- **Rejected reasons reach the next Mode B Scout context:**
+  `test_rejected_reasons_reach_the_next_mode_b_scout` checks reject → profile → Mode B
+  `RunInput` → the `scout.plan` prompt. E2E: the reason is in the profile.
+- **Double-clicking Select resumes exactly once:**
+  - `test_double_select_resumes_exactly_once`: 5 concurrent selects give one resume; the
+    resume and recovery jobs race, outcomes `[completed, skipped]`; one `run.resumed`; the
+    graph's `selected_brief` and Phase-2 stubs are done.
+  - Live HTTP: 4 parallel POSTs give one `run.resumed`.
+  - Vitest and e2e `dblclick`: one POST.
+- **Co-working on a non-paused run returns 409:** the service test (running run) and the
+  live test (queued and completed runs, all 6 endpoints → `run_not_paused`); e2e on a
+  completed run.
+- **Reloading mid-co-working restores the drawer from the server:**
+  - E2E: a reload reopens the same idea and the Versions tab with its diff.
+  - A reload while a reply is streaming keeps the agent choice, and the reply completes and
+    shows.
+  - Vitest restores from the URL.
+- **At 375 px:** no horizontal overflow with the drawer open. The screenshots were
+  reviewed, and the close-button overlap and positional diff labels they showed were fixed.
+  There were no console errors.
+- **Checks:** `pytest` (120), `pytest -m integration` (21), `mypy --strict`, `ruff check`,
+  `ruff format --check`, `alembic check` (0003 round-trips), the OpenAPI drift test, and the
+  CLI `--auto` / `--resume-select` all pass. So do `pnpm typecheck`, `lint`, `test` (65),
+  `format:check` and `build`.
+
+**Next:** Phase 5 — Phase-2 agents, finance engine & export
+(`docs/phases/05-phase2-business-plan.md`). Agents read `selected_brief` from the state.
 
 ---
 

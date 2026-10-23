@@ -70,6 +70,8 @@ cd backend && PYTHONPATH=. uv run python scripts/run_phase1.py --thread-id ID --
 cd backend && PYTHONPATH=. uv run python scripts/export_openapi.py  # regenerate openapi.json
 curl -XPOST localhost:8000/api/incubator/runs -H 'content-type: application/json' -d '{"mode":"seeded","seed":"..."}'
 curl -N localhost:8000/api/incubator/runs/RUN_ID/stream            # SSE; needs api + worker
+curl -N -XPOST localhost:8000/api/incubator/runs/RUN_ID/ideas/IDEA_ID/cowork -H 'content-type: application/json' -d '{"agent":"analyst","content":"..."}'  # paused runs only
+curl -XPOST localhost:8000/api/incubator/runs/RUN_ID/select -H 'content-type: application/json' -d '{"idea_id":"IDEA_ID"}'   # resume into Phase 2
 cd backend && uv run pytest && uv run mypy app scripts tests migrations && uv run ruff check .
 cd backend && uv run pytest -m integration                        # needs compose up
 cd frontend && pnpm dev                                           # web on :3000, proxies /api
