@@ -57,7 +57,7 @@ function ConnectionIndicator({ stream }: { stream: RunStreamState }) {
 function Meter({ label, used, limit }: { label: string; used: number; limit: number }) {
   const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-1">
+    <div className="flex min-w-36 flex-1 flex-col gap-1">
       <div className="flex items-baseline justify-between gap-2 text-xs">
         <span className="text-muted-foreground">{label}</span>
         <span className="tabular truncate font-mono">
@@ -87,10 +87,10 @@ function Meter({ label, used, limit }: { label: string; used: number; limit: num
 
 function BudgetMeter({ budget }: { budget: BudgetUsage }) {
   return (
-    <div className="flex items-end gap-4 sm:max-w-md">
+    <div className="flex flex-wrap items-start gap-x-4 gap-y-2 sm:max-w-lg sm:flex-nowrap">
       <Meter label="Tokens" used={budget.tokens_used} limit={budget.max_tokens} />
       <Meter label="Searches" used={budget.searches_used} limit={budget.max_searches} />
-      <div className="flex shrink-0 flex-col items-end gap-1 text-xs">
+      <div className="flex shrink-0 items-baseline gap-2 text-xs">
         <span className="text-muted-foreground">Cost</span>
         <span className="tabular font-mono">{formatUsd(budget.cost_usd)}</span>
       </div>

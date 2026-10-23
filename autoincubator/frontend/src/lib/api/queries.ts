@@ -26,6 +26,12 @@ export function useRun(runId: string) {
     queryKey: queryKeys.run(runId),
     queryFn: ({ signal }) => api.getRun(runId, signal),
     retry: retryTransient,
+    // Token/search counters and cost only reach the client through this endpoint (events
+    // carry them only at 80% and 100%), so poll gently while the run is working.
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === "queued" || status === "running" ? 5_000 : false;
+    },
   });
 }
 

@@ -23,10 +23,12 @@ function RunRow({ run }: { run: RunSummary }) {
           <span className="block truncate text-sm font-medium">
             {run.seed ?? <span className="text-muted-foreground italic">Autonomous scan</span>}
           </span>
-          <span className="text-muted-foreground flex gap-2 text-xs">
+          <span className="text-muted-foreground flex flex-wrap gap-x-1.5 text-xs whitespace-nowrap">
             <span>{run.mode === "seeded" ? "Seeded" : "Autonomous"}</span>
             {run.viable_count != null && (
-              <span className="tabular font-mono">· {run.viable_count} viable</span>
+              <span>
+                · <span className="tabular font-mono">{run.viable_count}</span> viable
+              </span>
             )}
             <span className="sm:hidden">· {formatRelative(run.created_at)}</span>
           </span>

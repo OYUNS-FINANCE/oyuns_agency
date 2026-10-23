@@ -200,7 +200,13 @@ export function ActivityPanel({
   }, [events.length]);
 
   return (
-    <section aria-labelledby="activity-heading" className={cn("flex min-h-0 flex-col", className)}>
+    <section
+      aria-labelledby="activity-heading"
+      // Exposed for end-to-end checks: the event log size and the stream cursor.
+      data-event-count={events.length}
+      data-last-event-id={events.at(-1)?.id ?? 0}
+      className={cn("flex min-h-0 flex-col", className)}
+    >
       <div className="flex items-center justify-between gap-2 pb-2">
         <h2
           id="activity-heading"
