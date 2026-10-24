@@ -6,6 +6,7 @@ prompt tells the model to treat the block as data. The sanitiser
 - strips markup, control and invisible characters (zero-width, bidi overrides, tag
   characters), which are the usual way to hide instructions from a human reviewer,
 - redacts sentences that read as instructions to an AI system, and logs each one,
+- drops a result that redaction leaves empty: it holds no data, only a URL to cite,
 - caps field lengths.
 
 It never rewrites numbers or facts: only whole instruction-like sentences are replaced, by a
@@ -34,6 +35,7 @@ _TAG = re.compile(r"<[^>]{0,2000}>")
 _WHITESPACE = re.compile(r"[^\S\n]+")
 _BLANK_LINES = re.compile(r"\n{3,}")
 _SENTENCE = re.compile(r"[^.!?\n]+(?:[.!?]+|\n|$)")
+_WORDS = re.compile(r"\w{2,}")
 
 # Unicode "format" characters that render as nothing: zero-width spaces/joiners, bidi
 # overrides and isolates, word joiner, BOM, and the Tags block (U+E0000..U+E007F).
@@ -138,10 +140,20 @@ def sanitize_results(
         cleaned, redacted = sanitize_result(
             result, snippet_max_chars=snippet_max_chars, title_max_chars=title_max_chars
         )
+        if redacted and not has_content(cleaned):
+            # Nothing but instructions: no data to use, only a URL a model could cite.
+            log.warning("search.injection_dropped", url=result.url, redacted_sentences=redacted)
+            continue
         if redacted:
             log.warning("search.injection_suspected", url=result.url, redacted_sentences=redacted)
         out.append(cleaned)
     return out
+
+
+def has_content(result: SearchResult) -> bool:
+    """False when redaction left no words in the title or snippet."""
+    text = f"{result.title} {result.snippet}".replace(REDACTION, " ")
+    return _WORDS.search(text.replace("(untitled)", " ")) is not None
 
 
 class SanitizingSearch:
