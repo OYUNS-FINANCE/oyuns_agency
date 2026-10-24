@@ -1,4 +1,4 @@
-.PHONY: up down migrate api worker ping phase1 openapi web check check-backend check-frontend test-integration install
+.PHONY: up down migrate api worker ping phase1 openapi web check check-backend check-frontend test-integration install evals-collect evals
 
 # WeasyPrint (PDF export) loads Pango at runtime. On macOS the uv-managed Python does not
 # search Homebrew's lib directory, so point dyld at it (brew install pango). It is set inline
@@ -48,3 +48,11 @@ check-frontend:
 
 test-integration:
 	cd backend && $(PANGO) uv run pytest -m integration
+
+# Manual evals (real keys, real money; not part of check). See backend/tests/evals/.
+evals-collect:
+	cd backend && uv run python -m tests.evals.collect $(ARGS)
+
+evals:
+	cd backend && uv run python -m tests.evals.grounding && uv run python -m tests.evals.quality \
+		&& uv run --group evals python -m tests.evals.diversity

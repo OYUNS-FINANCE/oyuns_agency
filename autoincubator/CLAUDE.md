@@ -77,10 +77,12 @@ curl localhost:8000/api/incubator/runs/RUN_ID/plan                              
 curl -OJ 'localhost:8000/api/incubator/runs/RUN_ID/plan/export?format=pdf'           # or format=md
 cd backend && uv run pytest && uv run mypy app scripts tests migrations && uv run ruff check .
 cd backend && uv run pytest -m integration                        # needs compose up
+cd backend && uv run python -m tests.evals.collect --max-cost 30    # manual evals: real runs → evals/results/runs/
+cd backend && uv run python -m tests.evals.grounding               # then quality; diversity needs `uv run --group evals`
 cd frontend && pnpm dev                                           # web on :3000, proxies /api
 cd frontend && pnpm typecheck && pnpm lint && pnpm test
 cd frontend && pnpm gen:api                                       # regenerate src/lib/api/schema.d.ts after make openapi
 ```
-`make up | migrate | api | worker | ping | phase1 ARGS="--auto" | openapi | web | check | test-integration` wrap the same commands.
+`make up | migrate | api | worker | ping | phase1 ARGS="--auto" | openapi | web | check | test-integration | evals-collect | evals` wrap the same commands.
 On macOS, run the API, the worker and pytest with `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib` so WeasyPrint finds Pango; the make targets do this.
 Keep this list accurate as it changes.

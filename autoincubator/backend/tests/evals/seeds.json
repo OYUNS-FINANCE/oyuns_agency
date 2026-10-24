@@ -1,0 +1,12 @@
+[
+  {"seed": "independent veterinary clinics", "constraints": {"business_model": "b2b"}},
+  {"seed": "small residential landlords with 1-20 units", "constraints": {"business_model": "b2b", "solo_founder": true}},
+  {"seed": "HVAC and plumbing contractors", "constraints": {"business_model": "b2b"}},
+  {"seed": "freelance translators and interpreters", "constraints": {"solo_founder": true}},
+  {"seed": "craft breweries and taprooms", "constraints": {"business_model": "b2b"}},
+  {"seed": "parents managing kids' extracurricular schedules", "constraints": {"business_model": "b2c"}},
+  {"seed": "EU AI Act compliance for small software companies", "constraints": {"region": "EU", "business_model": "b2b"}},
+  {"seed": "home care agencies for the elderly", "constraints": {"business_model": "b2b"}},
+  {"seed": "community sports clubs run by volunteers", "constraints": {"solo_founder": true}},
+  {"seed": "people preparing for a career change into nursing", "constraints": {"business_model": "b2c", "solo_founder": true}}
+]
