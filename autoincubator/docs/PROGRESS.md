@@ -3,9 +3,10 @@
 Claude updates this file at the end of every phase. Newest entries go on top.
 
 ## Current phase
-Phase 5 — done; Phase 6 (real search, evals, cost & observability) next.
-Still open from Phase 1: the real-Anthropic-key CLI check (now also covers streamed chat and
-the four Phase-2 agents).
+Phase 6 — code complete and verified offline; **not done**: the real runs and the grounding
+and quality evals are waiting for API keys (none in `.env` or the environment). Commands to
+finish it are under Phase 6 → "To finish". Still open from Phase 1: the real-Anthropic-key
+CLI check, which the Phase 6 real runs cover.
 
 ## Phase checklist
 - [x] 0 — Skeleton & infrastructure
@@ -14,8 +15,150 @@ the four Phase-2 agents).
 - [x] 3 — Frontend: start screen & live discovery
 - [x] 4 — Co-working checkpoint (HITL)
 - [x] 5 — Phase-2 agents, finance engine & export
-- [ ] 6 — Real search, evals, cost & observability
+- [ ] 6 — Real search, evals, cost & observability — code done; real runs + evals pending keys
 - [ ] 7 — Deployment
+
+---
+
+### Phase 6 — Real search, evals, cost & observability (2026-10-24)
+**Built:**
+- **Search** (`providers/search/`, ADR 0008):
+  - `TavilySearch` (default for real runs) and `SerperSearch` behind `SEARCH_PROVIDER`. A
+    missing key fails at start-up with the variable's name.
+  - The shared HTTP base:
+    - retries timeouts, connection errors and 408/425/429/5xx with jittered backoff,
+      honouring `Retry-After`;
+    - a token bucket and one pooled client per provider, per process.
+  - A cross-run Postgres cache (`search_result_cache`, migration 0005, TTL
+    `SEARCH_CACHE_TTL_S`). It sits under the per-run cache and its budget hooks.
+- **Injection hygiene** (`sanitize.py`):
+  - Strips markup, control and invisible characters (zero-width, bidi, tag block).
+  - Redacts instruction-like sentences with a visible marker and logs each one.
+  - **Drops results that are nothing but instructions.**
+  - Caps lengths. It runs before the `<untrusted_web_content>` wrapping.
+- **Models and cost:**
+  - Per-agent defaults: Haiku for the Scout; Sonnet for the Analyst and the Phase-2
+    builders; Opus for the Skeptic and Editor.
+  - Anthropic prompt caching on the system prompts (`LLM_PROMPT_CACHING`).
+  - Cost per agent and model on the run detail, and a "Cost breakdown" disclosure on the run
+    page. It shows model, calls, tokens, cached tokens and cost per agent, plus a daily-spend
+    meter.
+  - **Global daily cap** `DAILY_COST_CAP_USD`: new runs are refused (429
+    `daily_cap_reached`), and a running run stops at its next LLM call as
+    `budget_exhausted` with kind `daily_cost` (amounts in cents on the event).
+- **Rate limits:**
+  - Redis fixed windows per client: run creation per hour, LLM-starting endpoints per
+    minute, the rest per minute. SSE and health are exempt.
+  - `TRUSTED_PROXY_HOPS` reads the real client IP behind Traefik. A Redis outage fails open.
+- **Observability:**
+  - OpenTelemetry over OTLP/HTTP, off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set. **A run's
+    trace id is its UUID.**
+  - Every request on a run, the enqueue in `POST /runs`, and both worker jobs are roots in
+    that trace. Nodes, LLM attempts and searches nest under the jobs.
+  - structlog lines carry `run_id`, `node`, `request_id` and the trace/span ids.
+  - A local Jaeger runs under a compose profile: `docker compose --profile tracing up -d
+    jaeger`.
+- **Evals** (`backend/tests/evals/`, manual, not in CI; `make evals-collect`, `make evals`):
+  - `collect`: runs Phase 1 in-process for 10 fixed seeds (`seeds.json`) plus 3 autonomous
+    runs, under `--max-cost`. It saves each checkpoint, cost per agent and search count to
+    `evals/results/runs/<stamp>/`. It refuses the fakes unless `--allow-offline` is passed.
+  - `grounding`: samples sourced figures (TAM/SAM/SOM, competitor and benchmark prices,
+    segment sizes; default 40, seeded) and fetches each page.
+    - Unreadable pages count as failures with their cause: `dead_link`, `blocked`,
+      `timeout`, `http_error`, `unreadable` (PDFs among them).
+    - A judge (Sonnet by default) returns supported, partial or unsupported, plus a cause
+      (`wrong_number`, `different_metric`, `derived`, `not_on_page`).
+    - It must quote the page verbatim, or the answer is rejected and retried.
+    - Headline: supported / sampled. Also reported: supported / readable.
+  - `quality`: Opus grades the top 3 briefs per run, 1–5 against anchored rubrics.
+    - Dimensions: specificity, evidence, solo-founder fit, differentiation, risk honesty.
+    - Plus "worth a week of validation?", means by mode, and the correlation with the
+      pipeline's own composite score.
+  - `diversity`: local embeddings (fastembed, bge-small; `uv sync --group evals`) of the
+    Mode B ideas. It reports the mean cosine distance within and across runs, and
+    near-duplicates across runs.
+  - Every result file records git SHA, prompt version, judge model, providers and an
+    `offline` flag, and appends to `evals/results/history.jsonl`.
+
+**Deviations from spec (and why):**
+- **One ADR (0008) instead of two.** Search, cost, rate limits and tracing share one
+  context (deploying on a single VPS) and are cross-referenced from the code as 0008.
+- **Tracing links processes by trace id, not by propagated context.** Context propagation
+  breaks across the checkpoint pause and worker recovery. The `POST /runs` HTTP span stays
+  in its own trace; the enqueue span in the run's trace records its id.
+- **Evals run the graph in-process** (in-memory checkpointer), not through the API, so they
+  don't need the stack. That means they bypass the DB daily cap, so `collect` has its own
+  `--max-cost` (default $30).
+- **Injection test:** the acceptance check runs offline on `FakeLLM` (see below). With a real
+  model, the same page is redacted before any prompt sees it, so the model never receives
+  the instructions. A behavioural test against a real model was not run.
+
+**ADRs added:** 0008 — real search chain, sanitising, per-agent models and prompt caching,
+daily cap, rate limits, OpenTelemetry with run-id trace ids.
+
+**Known issues / tech debt:**
+- **No real-key run yet.** Every prompt, the Haiku Scout's extraction quality, the Phase-2
+  number rule and prompt-cache hit rates are unproven against real models and real search.
+- **Injection detection is heuristic** (regexes). Novel phrasings get through to the
+  delimited block, where only the prompt rules defend. Redactions are logged
+  (`search.injection_suspected` / `search.injection_dropped`) for auditing.
+- **Found while writing the injection test:** a result whose title and snippet were wholly
+  redacted still reached the prompt with its URL, and the offline Scout built opportunity
+  `opp-07` citing `spam.example`. Such results are now dropped.
+- **Grounding can't read PDFs.** Market reports are often PDFs, so they count as
+  `unreadable` failures. That depresses the headline number honestly rather than skipping
+  them. A PDF text extractor is the obvious next step if this dominates.
+- **Fixed-window rate limits** allow up to 2× the limit across a window edge. That's fine
+  for one user; revisit with auth.
+- **The daily cap can overshoot** by at most one in-flight call per concurrent agent
+  (`AGENT_CONCURRENCY`).
+- **Diversity downloads** a ~70 MB embedding model from Hugging Face on first use.
+- **Still outside the repo:** the e2e browser script from Phases 3–5 (it lives in the
+  session scratchpad). Carried to Phase 7.
+
+**Acceptance criteria:**
+- [ ] **3 real Mode A + 2 real Mode B runs end-to-end, cost per run reported** — *pending
+  keys*. Cost per run is reported by `collect` (per run and per agent) and on the run page.
+  Offline: `collect --allow-offline` ran 2 Mode A + 2 Mode B runs to the checkpoint, and
+  `test_full_run_with_fakes_completes_with_a_traceable_exported_plan` covers completion.
+- [ ] **Grounding ≥ 80% supported, failures listed with causes** — *pending keys*. The
+  harness is built and unit-tested (`tests/unit/test_evals.py`): fetch classification,
+  excerpting long pages around the number, the verbatim-quote rule, and unreadable pages
+  counted as failures.
+- [x] **The prompt-injection page in mock search doesn't change agent behaviour** —
+  `tests/unit/test_injection_run.py`.
+  - Whole offline runs in both modes retrieve the page; no prompt contains its URL or its
+    phrases.
+  - The briefs (titles, scores, cited sources) are identical to the same runs with that one
+    result removed.
+  - Plus the sanitiser unit tests in `test_search_sanitize.py`.
+- [x] **One trace shows a full run across API → worker → nodes.** Verified in Jaeger 2.20
+  with the API and worker on the fakes and `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318`.
+  - Run `903842aa-46f2-4a0c-a516-edf91051e08c` (Mode B, selected, completed): trace
+    `903842aa46f24a0ca516edf91051e08c`, 102 spans, services `autoincubator-api` and
+    `autoincubator-worker`.
+  - Roots: `api.enqueue_run` → `worker.start_run` (Phase 1) → the `HTTP POST …/select` →
+    `worker.start_run` (Phase 2), plus the run's `HTTP GET`s.
+  - Every `node.*` sits under its job and every `llm.call` under its node.
+- [ ] **PROGRESS.md has the eval results and a cost table** — *pending keys*. No numbers are
+  given here, because none were measured.
+- Checks: backend 262 unit + 27 integration tests pass; `mypy --strict` and ruff are clean.
+  Frontend typecheck, lint and 79 tests pass.
+
+**To finish (needs `ANTHROPIC_API_KEY`, `TAVILY_API_KEY`):**
+```
+# .env: LLM_PROVIDER=anthropic SEARCH_PROVIDER=tavily + the two keys
+make evals-collect ARGS="--max-cost 30"            # 10 Mode A + 3 Mode B (covers 3 A + 2 B)
+make evals                                         # grounding, quality, diversity
+make api; make worker; make web                    # separate terminals
+```
+In the UI, start 3 Mode A + 2 Mode B runs and select an idea on each, so that Phase 2
+completes. Cost per run is on each run page.
+Then fill in here: the grounding % with its failure table, the quality means, the diversity
+numbers, and a cost table (run, mode, cost, tokens, searches).
+
+**Next:** finish the real runs above, then Phase 7 — deployment (Dokploy on a VPS:
+`TRUSTED_PROXY_HOPS=1`, Pango in the image, an OTLP endpoint or tracing off).
 
 ---
 
