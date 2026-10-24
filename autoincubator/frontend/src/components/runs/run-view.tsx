@@ -27,11 +27,19 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/client";
 import { useMerge, useRun, useRunEvents } from "@/lib/api/queries";
-import { isTerminal, type BudgetUsage, type RunDetail } from "@/lib/api/types";
+import { isTerminal, type AgentCost, type BudgetUsage, type RunDetail } from "@/lib/api/types";
 import { announcedIdeas } from "@/lib/activity";
 import { inFlight, type InFlight } from "@/lib/cowork";
 import { useCoworkParams } from "@/lib/use-cowork-params";
-import { describeError, formatDateTime, formatInteger, formatUsd } from "@/lib/format";
+import {
+  describeError,
+  formatCompact,
+  formatDateTime,
+  formatInteger,
+  formatUsd,
+  formatUsdFine,
+} from "@/lib/format";
+import { AGENT_LABEL } from "@/lib/ideas";
 import type { ConnectionStatus } from "@/lib/sse/run-stream";
 import { useRunStream, type RunStreamState } from "@/lib/sse/use-run-stream";
 import { cn } from "@/lib/utils";
@@ -96,14 +104,113 @@ function Meter({ label, used, limit }: { label: string; used: number; limit: num
 }
 
 function BudgetMeter({ budget }: { budget: BudgetUsage }) {
+  const capped = budget.daily_cap_usd > 0;
   return (
-    <div className="flex flex-wrap items-start gap-x-4 gap-y-2 sm:max-w-lg sm:flex-nowrap">
-      <Meter label="Tokens" used={budget.tokens_used} limit={budget.max_tokens} />
-      <Meter label="Searches" used={budget.searches_used} limit={budget.max_searches} />
-      <div className="flex shrink-0 items-baseline gap-2 text-xs">
-        <span className="text-muted-foreground">Cost</span>
-        <span className="tabular font-mono">{formatUsd(budget.cost_usd)}</span>
+    <div className="flex flex-col gap-2 sm:max-w-lg">
+      <div className="flex flex-wrap items-start gap-x-4 gap-y-2 sm:flex-nowrap">
+        <Meter label="Tokens" used={budget.tokens_used} limit={budget.max_tokens} />
+        <Meter label="Searches" used={budget.searches_used} limit={budget.max_searches} />
+        <div className="flex shrink-0 items-baseline gap-2 text-xs">
+          <span className="text-muted-foreground">Cost</span>
+          <span className="tabular font-mono">{formatUsd(budget.cost_usd)}</span>
+        </div>
       </div>
+      {(budget.cost_by_agent.length > 0 || capped) && (
+        <details className="group text-xs">
+          <summary className="text-muted-foreground hover:text-foreground w-fit cursor-pointer select-none">
+            Cost breakdown
+          </summary>
+          <div className="mt-2 flex flex-col gap-3">
+            {budget.cost_by_agent.length > 0 && <CostTable rows={budget.cost_by_agent} />}
+            {capped && (
+              <UsdMeter
+                label="Daily spend, all runs"
+                used={budget.daily_spent_usd}
+                limit={budget.daily_cap_usd}
+              />
+            )}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function UsdMeter({ label, used, limit }: { label: string; used: number; limit: number }) {
+  const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="tabular font-mono">
+          {formatUsd(used)}
+          <span className="text-muted-foreground"> / {formatUsd(limit)}</span>
+        </span>
+      </div>
+      <div
+        className="bg-muted h-1 overflow-hidden rounded-full"
+        role="meter"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={limit}
+        aria-valuenow={used}
+      >
+        <div
+          className={cn(
+            "h-full rounded-full",
+            pct >= 100 ? "bg-destructive" : pct >= 80 ? "bg-warning" : "bg-foreground/70",
+          )}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function CostTable({ rows }: { rows: readonly AgentCost[] }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-md border-collapse">
+        <caption className="sr-only">LLM cost by agent</caption>
+        <thead>
+          <tr className="text-muted-foreground border-b text-left">
+            <th scope="col" className="py-1 pr-3 font-medium">
+              Agent
+            </th>
+            <th scope="col" className="py-1 pr-3 font-medium">
+              Model
+            </th>
+            <th scope="col" className="py-1 pr-3 text-right font-medium">
+              Calls
+            </th>
+            <th scope="col" className="py-1 pr-3 text-right font-medium">
+              Tokens in / out
+            </th>
+            <th scope="col" className="py-1 pr-3 text-right font-medium">
+              Cached
+            </th>
+            <th scope="col" className="py-1 text-right font-medium">
+              Cost
+            </th>
+          </tr>
+        </thead>
+        <tbody className="tabular font-mono">
+          {rows.map((row) => (
+            <tr key={`${row.agent}:${row.model}`} className="border-b last:border-0">
+              <th scope="row" className="py-1 pr-3 text-left font-sans font-normal">
+                {AGENT_LABEL[row.agent] ?? row.agent}
+              </th>
+              <td className="text-muted-foreground py-1 pr-3">{row.model}</td>
+              <td className="py-1 pr-3 text-right">{formatInteger(row.calls)}</td>
+              <td className="py-1 pr-3 text-right">
+                {formatCompact(row.input_tokens)} / {formatCompact(row.output_tokens)}
+              </td>
+              <td className="py-1 pr-3 text-right">{formatCompact(row.cache_read_input_tokens)}</td>
+              <td className="py-1 text-right">{formatUsdFine(row.cost_usd)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -176,7 +283,8 @@ function RunBanners({
   if (run.status === "budget_exhausted") {
     banners.push(
       <Banner key="budget" icon={WalletCards} tone="bad" title="Budget exhausted">
-        {run.error?.message ?? "The run stopped because it reached its token or search budget."}{" "}
+        {run.error?.message ??
+          "The run stopped because it reached its token or search budget, or the daily cost cap."}{" "}
         Ideas scored before the stop are not shown, because none reached the checkpoint.
       </Banner>,
     );

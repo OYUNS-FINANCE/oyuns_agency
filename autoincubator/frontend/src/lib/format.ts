@@ -7,6 +7,13 @@ const usd = new Intl.NumberFormat("en", {
   currency: "USD",
   maximumFractionDigits: 2,
 });
+// Per-agent costs are often fractions of a cent.
+const usdFine = new Intl.NumberFormat("en", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 4,
+});
 const clock = new Intl.DateTimeFormat("en", {
   hour: "2-digit",
   minute: "2-digit",
@@ -19,6 +26,7 @@ const relative = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
 export const formatCompact = (n: number) => compact.format(n);
 export const formatInteger = (n: number) => integer.format(n);
 export const formatUsd = (n: number) => usd.format(n);
+export const formatUsdFine = (n: number) => usdFine.format(n);
 export const formatClock = (iso: string) => clock.format(new Date(iso));
 export const formatDateTime = (iso: string) => dateTime.format(new Date(iso));
 

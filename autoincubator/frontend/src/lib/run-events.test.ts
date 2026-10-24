@@ -52,6 +52,15 @@ describe("applyEventsToDetail", () => {
     expect(detail.budget.searches_used).toBe(100);
   });
 
+  it("reads the daily cost cap in cents", () => {
+    const detail = applyEventsToDetail(runDetail(), [
+      event(1, "budget.exhausted", { kind: "daily_cost", used: 2_550, limit: 2_500 }),
+    ]);
+    expect(detail.budget.daily_spent_usd).toBe(25.5);
+    expect(detail.budget.daily_cap_usd).toBe(25);
+    expect(detail.budget.max_searches).toBe(100);
+  });
+
   it("returns the same object when no event changes the detail", () => {
     const detail = runDetail();
     expect(applyEventsToDetail(detail, [thought(1)])).toBe(detail);

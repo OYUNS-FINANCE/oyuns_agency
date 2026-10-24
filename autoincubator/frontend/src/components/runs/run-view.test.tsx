@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { RunDetail, RunEvent } from "@/lib/api/types";
@@ -100,6 +100,50 @@ describe("RunView", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Budget exhausted");
     expect(alert).toHaveTextContent("Search budget exhausted (100/100).");
+  });
+
+  it("breaks the cost down by agent and shows the daily cap", async () => {
+    const base = runDetail({ status: "awaiting_human", viable_count: 0 });
+    renderRun(
+      {
+        ...base,
+        budget: {
+          ...base.budget,
+          cost_usd: 0.4123,
+          cost_by_agent: [
+            {
+              agent: "scout",
+              model: "claude-haiku-5-5",
+              calls: 3,
+              input_tokens: 12_000,
+              output_tokens: 2_400,
+              cache_read_input_tokens: 8_000,
+              cost_usd: 0.0123,
+            },
+            {
+              agent: "skeptic",
+              model: "claude-opus-5-5",
+              calls: 2,
+              input_tokens: 9_000,
+              output_tokens: 3_000,
+              cache_read_input_tokens: 0,
+              cost_usd: 0.4,
+            },
+          ],
+          daily_cap_usd: 20,
+          daily_spent_usd: 4.5,
+        },
+      },
+      [statusEvent(1, "awaiting_human")],
+    );
+    const table = await screen.findByRole("table", { name: "LLM cost by agent" });
+    expect(within(table).getByRole("rowheader", { name: "Trend Scout" })).toBeInTheDocument();
+    expect(within(table).getByText("$0.0123")).toBeInTheDocument();
+    expect(within(table).getByText("claude-opus-5-5")).toBeInTheDocument();
+    expect(screen.getByRole("meter", { name: "Daily spend, all runs" })).toHaveAttribute(
+      "aria-valuenow",
+      "4.5",
+    );
   });
 
   it("shows the error of a failed run", async () => {

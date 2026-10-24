@@ -61,6 +61,10 @@ export function applyEventsToDetail(detail: RunDetail, events: readonly RunEvent
         if (kind === "tokens") {
           budget.tokens_used = Math.max(budget.tokens_used, used);
           budget.max_tokens = limit;
+        } else if (kind === "daily_cost") {
+          // The daily cap is reported in cents.
+          budget.daily_spent_usd = Math.max(budget.daily_spent_usd, used / 100);
+          budget.daily_cap_usd = limit / 100;
         } else {
           budget.searches_used = Math.max(budget.searches_used, used);
           budget.max_searches = limit;

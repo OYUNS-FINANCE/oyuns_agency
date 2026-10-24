@@ -342,6 +342,23 @@ export interface components {
              */
             type: "agent.completed";
         };
+        /** AgentCost */
+        AgentCost: {
+            /** Agent */
+            agent: string;
+            /** Cache Read Input Tokens */
+            cache_read_input_tokens: number;
+            /** Calls */
+            calls: number;
+            /** Cost Usd */
+            cost_usd: number;
+            /** Input Tokens */
+            input_tokens: number;
+            /** Model */
+            model: string;
+            /** Output Tokens */
+            output_tokens: number;
+        };
         /** AgentStarted */
         AgentStarted: {
             /**
@@ -517,7 +534,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "tokens" | "searches";
+            kind: "tokens" | "searches" | "daily_cost";
             /** Limit */
             limit: number;
             /** Used */
@@ -561,8 +578,23 @@ export interface components {
         };
         /** BudgetUsage */
         BudgetUsage: {
+            /**
+             * Cost By Agent
+             * @default []
+             */
+            cost_by_agent: components["schemas"]["AgentCost"][];
             /** Cost Usd */
             cost_usd: number;
+            /**
+             * Daily Cap Usd
+             * @default 0
+             */
+            daily_cap_usd: number;
+            /**
+             * Daily Spent Usd
+             * @default 0
+             */
+            daily_spent_usd: number;
             /** Max Searches */
             max_searches: number;
             /** Max Tokens */
@@ -578,7 +610,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "tokens" | "searches";
+            kind: "tokens" | "searches" | "daily_cost";
             /** Limit */
             limit: number;
             /** Used */
@@ -1895,6 +1927,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     put_profile_api_incubator_profile_put: {
@@ -1937,6 +1978,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     list_runs_api_incubator_runs_get: {
@@ -1971,6 +2021,15 @@ export interface operations {
             };
             /** @description Validation error */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2020,6 +2079,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     get_run_api_incubator_runs__run_id__get: {
@@ -2053,6 +2121,15 @@ export interface operations {
             };
             /** @description Validation error */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2113,6 +2190,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     get_idea_api_incubator_runs__run_id__ideas__idea_id__get: {
@@ -2154,6 +2240,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     list_cowork_messages_api_incubator_runs__run_id__ideas__idea_id__cowork_get: {
@@ -2188,6 +2283,15 @@ export interface operations {
             };
             /** @description Validation error */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2249,6 +2353,15 @@ export interface operations {
                     "text/event-stream": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     reject_api_incubator_runs__run_id__ideas__idea_id__reject_post: {
@@ -2303,6 +2416,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     rescore_api_incubator_runs__run_id__ideas__idea_id__rescore_post: {
@@ -2346,6 +2468,15 @@ export interface operations {
             };
             /** @description Validation error */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2407,6 +2538,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     get_plan_api_incubator_runs__run_id__plan_get: {
@@ -2440,6 +2580,15 @@ export interface operations {
             };
             /** @description Validation error */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2483,6 +2632,15 @@ export interface operations {
             };
             /** @description Validation error */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2552,6 +2710,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     stream_run_api_incubator_runs__run_id__stream_get: {
@@ -2590,6 +2757,15 @@ export interface operations {
             };
             /** @description Validation error */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

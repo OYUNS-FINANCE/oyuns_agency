@@ -7,7 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Switch } from "@/components/ui/switch";
 import { isTerminal, type RunEvent, type RunStatus } from "@/lib/api/types";
 import { buildTimeline, type AgentPass, type RunMarker } from "@/lib/activity";
-import { formatClock, formatDuration, formatInteger } from "@/lib/format";
+import { formatClock, formatDuration, formatInteger, formatUsd } from "@/lib/format";
 import { AGENT_LABEL, STATUS_LABEL } from "@/lib/ideas";
 import { cn } from "@/lib/utils";
 
@@ -155,15 +155,25 @@ function markerText(event: RunMarker): { text: string; tone: "plain" | "warn" | 
       return { text: `${event.data.code}: ${event.data.message}`, tone: "bad" };
     case "budget.warning":
       return {
-        text: `${event.data.kind} budget at ${Math.round((event.data.used / event.data.limit) * 100)}% (${formatInteger(event.data.used)} / ${formatInteger(event.data.limit)})`,
+        text: `${event.data.kind} budget at ${Math.round((event.data.used / event.data.limit) * 100)}% (${budgetAmounts(event.data)})`,
         tone: "warn",
       };
     case "budget.exhausted":
       return {
-        text: `${event.data.kind} budget exhausted (${formatInteger(event.data.used)} / ${formatInteger(event.data.limit)})`,
+        text:
+          event.data.kind === "daily_cost"
+            ? `daily cost cap reached (${budgetAmounts(event.data)})`
+            : `${event.data.kind} budget exhausted (${budgetAmounts(event.data)})`,
         tone: "bad",
       };
   }
+}
+
+/** Tokens and searches are counts; the daily cap is in cents. */
+function budgetAmounts({ kind, used, limit }: { kind: string; used: number; limit: number }) {
+  return kind === "daily_cost"
+    ? `${formatUsd(used / 100)} / ${formatUsd(limit / 100)}`
+    : `${formatInteger(used)} / ${formatInteger(limit)}`;
 }
 
 function MarkerView({ event }: { event: RunMarker }) {

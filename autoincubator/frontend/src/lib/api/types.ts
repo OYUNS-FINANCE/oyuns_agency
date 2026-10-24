@@ -12,6 +12,7 @@ export type RunSummary = Schemas["RunSummary"];
 export type RunList = Schemas["RunList"];
 export type RunDetail = Schemas["RunDetail"];
 export type BudgetUsage = Schemas["BudgetUsage"];
+export type AgentCost = Schemas["AgentCost"];
 export type CreateRunRequest = Schemas["CreateRunRequest"];
 export type CreateRunResponse = Schemas["CreateRunResponse"];
 export type RunConstraints = Schemas["RunConstraints"];
