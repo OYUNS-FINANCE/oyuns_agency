@@ -29,6 +29,15 @@ services:
       timeout: 5s
       retries: 10
 
+  # Local trace viewer (ADR 0008): `docker compose --profile tracing up -d jaeger`, then
+  # OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 and open http://localhost:16686.
+  jaeger:
+    image: jaegertracing/jaeger:2.20.0
+    profiles: ["tracing"]
+    ports:
+      - "16686:16686"   # UI and query API
+      - "4318:4318"     # OTLP/HTTP
+
 volumes:
   postgres_data:
   redis_data:

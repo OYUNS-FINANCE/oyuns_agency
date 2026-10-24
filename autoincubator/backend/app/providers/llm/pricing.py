@@ -1,7 +1,7 @@
 """Per-model token prices (USD per million tokens), Anthropic first-party rates.
 
 Input/output/cache-read rates are the published ones (2026-10). Cache writes are priced at
-1.25x input (5-minute TTL); prompt caching is not enabled yet, so they are normally zero.
+1.25x input (5-minute TTL), the TTL `LLM_PROMPT_CACHING` uses.
 """
 
 from dataclasses import dataclass

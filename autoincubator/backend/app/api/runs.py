@@ -9,6 +9,7 @@ from typing import Annotated
 from arq.connections import ArqRedis
 from fastapi import APIRouter, Depends, Header, Query, Request, status
 from fastapi.sse import EventSourceResponse, ServerSentEvent
+from opentelemetry.trace import SpanKind
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.deps import (
@@ -24,6 +25,7 @@ from app.api.ratelimit import limit_api, limit_create_run
 from app.core.config import Settings
 from app.core.errors import ERROR_RESPONSES
 from app.core.logging import get_logger
+from app.core.telemetry import current_ids, run_span
 from app.db.enums import TERMINAL_STATUSES, RunStatus
 from app.db.repositories import events as events_repo
 from app.db.repositories import runs as runs_repo
@@ -60,10 +62,19 @@ async def create_run(
     """Queues a run; the worker executes it. Progress arrives on `/runs/{id}/stream`."""
     run = await runs_service.create_run(session, user_id, body, settings)
     await session.commit()
+    # This request's path has no run id yet, so its HTTP span is in a trace of its own; the
+    # enqueue opens the run's trace (ADR 0008) and points back at the request.
+    request_ids = current_ids()
     try:
-        await arq.enqueue_job(
-            START_RUN, str(run.id), _job_id=f"start:{run.id}", _queue_name=settings.arq_queue_name
-        )
+        with run_span("api.enqueue_run", run.id, kind=SpanKind.PRODUCER) as span:
+            if request_ids:
+                span.set_attribute("http.request_trace_id", request_ids["trace_id"])
+            await arq.enqueue_job(
+                START_RUN,
+                str(run.id),
+                _job_id=f"start:{run.id}",
+                _queue_name=settings.arq_queue_name,
+            )
     except Exception:
         # The run row is committed; the worker's recovery sweep enqueues queued runs
         # that have no job, so the run still starts once Redis is back.
