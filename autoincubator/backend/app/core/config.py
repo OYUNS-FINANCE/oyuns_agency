@@ -3,7 +3,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -11,6 +11,14 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_MODEL = "claude-sonnet-5-5"
 CHEAP_MODEL = "claude-haiku-5-5"
 STRONG_MODEL = "claude-opus-5-5"
+OPENAI_DEFAULT_MODEL = "gpt-5"
+OPENAI_CHEAP_MODEL = "gpt-5-mini"
+OPENAI_STRONG_MODEL = "gpt-5"
+_OPENAI_EQUIVALENT = {
+    DEFAULT_MODEL: OPENAI_DEFAULT_MODEL,
+    CHEAP_MODEL: OPENAI_CHEAP_MODEL,
+    STRONG_MODEL: OPENAI_STRONG_MODEL,
+}
 
 
 class RubricWeights(BaseSettings):
@@ -50,9 +58,10 @@ class Settings(BaseSettings):
     """Owner of every row until auth exists (single-user mode)."""
 
     # Providers
-    llm_provider: Literal["anthropic", "fake"] = "fake"
+    llm_provider: Literal["anthropic", "openai", "fake"] = "fake"
     search_provider: Literal["mock", "tavily", "serper"] = "mock"
     anthropic_api_key: SecretStr | None = None
+    openai_api_key: SecretStr | None = None
     tavily_api_key: SecretStr | None = None
     serper_api_key: SecretStr | None = None
     # Per-agent model routing (ADR 0008): cheap model for the high-volume Scout, the strongest
@@ -130,6 +139,17 @@ class Settings(BaseSettings):
     """A chat reply still pending after this long is reported as failed."""
     rejected_reasons_max: int = Field(default=20, ge=1)
     """How many recent rejection reasons the founder profile keeps for Mode B."""
+
+    @model_validator(mode="after")
+    def _openai_model_defaults(self) -> "Settings":
+        """With LLM_PROVIDER=openai, a per-agent model still on its Claude default becomes the
+        OpenAI tier equivalent. A model set explicitly in the environment is left alone."""
+        if self.llm_provider == "openai":
+            for name in type(self).model_fields:
+                value = getattr(self, name)
+                if name.endswith("_model") and value in _OPENAI_EQUIVALENT:
+                    setattr(self, name, _OPENAI_EQUIVALENT[value])
+        return self
 
     @property
     def asyncpg_dsn(self) -> str:

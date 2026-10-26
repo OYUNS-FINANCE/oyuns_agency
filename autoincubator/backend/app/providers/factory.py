@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from anthropic import AsyncAnthropic
+from openai import AsyncOpenAI
 
 from app.core.config import Settings
 from app.events.sink import EventSink, NullEventSink
@@ -11,6 +12,7 @@ from app.providers.dedup import JaccardDeduplicator
 from app.providers.llm.anthropic import AnthropicLLM
 from app.providers.llm.base import BeforeCallHook, LLMProvider, UsageHook
 from app.providers.llm.fake import FakeLLM, offline_responder
+from app.providers.llm.openai import OpenAILLM
 from app.providers.search.base import CachedSearchProvider, ResultStore, SearchCache, SearchHook
 from app.providers.search.factory import build_search
 
@@ -27,6 +29,15 @@ def build_llm(
             usage_hook=usage_hook,
             before_call=before_call,
             latency_s=settings.fake_llm_latency_ms / 1000,
+        )
+    if settings.llm_provider == "openai":
+        openai_key = settings.openai_api_key.get_secret_value() if settings.openai_api_key else ""
+        # Empty → let the SDK resolve credentials itself (OPENAI_API_KEY).
+        return OpenAILLM(
+            AsyncOpenAI(api_key=openai_key) if openai_key else AsyncOpenAI(),
+            max_validation_retries=settings.llm_max_validation_retries,
+            usage_hook=usage_hook,
+            before_call=before_call,
         )
     key = settings.anthropic_api_key.get_secret_value() if settings.anthropic_api_key else ""
     # Empty → let the SDK resolve credentials itself (ANTHROPIC_API_KEY, profiles, WIF).
