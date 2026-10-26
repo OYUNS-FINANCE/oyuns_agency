@@ -21,6 +21,39 @@ _OPENAI_EQUIVALENT = {
 }
 
 
+AGENT_MODEL_FIELDS = (
+    "scout_model",
+    "analyst_model",
+    "skeptic_model",
+    "product_architect_model",
+    "gtm_strategist_model",
+    "financial_modeler_model",
+    "editor_model",
+)
+"""Settings fields that route an agent to a model; the UI edits exactly these."""
+
+MODEL_PRESETS: dict[str, dict[str, str]] = {
+    "anthropic": {
+        "scout_model": CHEAP_MODEL,
+        "analyst_model": DEFAULT_MODEL,
+        "skeptic_model": STRONG_MODEL,
+        "product_architect_model": DEFAULT_MODEL,
+        "gtm_strategist_model": DEFAULT_MODEL,
+        "financial_modeler_model": DEFAULT_MODEL,
+        "editor_model": STRONG_MODEL,
+    },
+    "openai": {
+        "scout_model": OPENAI_CHEAP_MODEL,
+        "analyst_model": OPENAI_DEFAULT_MODEL,
+        "skeptic_model": OPENAI_STRONG_MODEL,
+        "product_architect_model": OPENAI_DEFAULT_MODEL,
+        "gtm_strategist_model": OPENAI_DEFAULT_MODEL,
+        "financial_modeler_model": OPENAI_DEFAULT_MODEL,
+        "editor_model": OPENAI_STRONG_MODEL,
+    },
+}
+
+
 class RubricWeights(BaseSettings):
     """Composite-score weights for the Skeptic rubric. Normalised at use, so any scale works."""
 
@@ -60,10 +93,15 @@ class Settings(BaseSettings):
     # Providers
     llm_provider: Literal["anthropic", "openai", "fake"] = "fake"
     search_provider: Literal["mock", "tavily", "serper"] = "mock"
+    llm_base_url: str | None = None
+    """Custom endpoint for the selected LLM provider (OpenAI-compatible gateways, proxies)."""
     anthropic_api_key: SecretStr | None = None
     openai_api_key: SecretStr | None = None
     tavily_api_key: SecretStr | None = None
     serper_api_key: SecretStr | None = None
+    settings_encryption_key: SecretStr | None = None
+    """Fernet key that encrypts API keys saved from the UI. Required in production; local and
+    test environments fall back to a fixed development key."""
     # Per-agent model routing (ADR 0008): cheap model for the high-volume Scout, the strongest
     # for the two judgement-heavy agents. Every one can be overridden from the environment.
     scout_model: str = CHEAP_MODEL

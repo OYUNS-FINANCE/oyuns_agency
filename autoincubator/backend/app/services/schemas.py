@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Literal, Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, SecretStr, model_validator
 
 from app.agents.analyst.schemas import MarketAnalysis
 from app.agents.common.schemas import (
@@ -240,3 +240,66 @@ class PlanResponse(BaseModel):
     created_at: datetime
     plan: BusinessPlan
     engine_formulas: list[EngineFormula]
+
+
+LLMProviderName = Literal["anthropic", "openai", "fake"]
+
+
+class AgentModels(BaseModel):
+    scout_model: str = Field(min_length=1, max_length=100)
+    analyst_model: str = Field(min_length=1, max_length=100)
+    skeptic_model: str = Field(min_length=1, max_length=100)
+    product_architect_model: str = Field(min_length=1, max_length=100)
+    gtm_strategist_model: str = Field(min_length=1, max_length=100)
+    financial_modeler_model: str = Field(min_length=1, max_length=100)
+    editor_model: str = Field(min_length=1, max_length=100)
+
+
+class ApiKeyStatus(BaseModel):
+    is_set: bool
+    hint: str | None = Field(default=None, description="Last 4 characters, never the key.")
+    source: Literal["ui", "environment"] | None = None
+
+
+class LLMSettingsView(BaseModel):
+    provider: LLMProviderName
+    base_url: str | None
+    models: AgentModels
+    anthropic_key: ApiKeyStatus
+    openai_key: ApiKeyStatus
+    source: Literal["ui", "environment"] = Field(
+        description="`ui` once saved from the settings page; otherwise the backend environment."
+    )
+    updated_at: datetime | None
+
+
+class LLMSettingsUpdate(BaseModel):
+    provider: LLMProviderName
+    base_url: str | None = Field(default=None, max_length=500)
+    models: AgentModels
+    api_key: SecretStr | None = Field(
+        default=None,
+        description="New key for the selected provider; omit to keep the stored one.",
+    )
+    clear_api_key: bool = Field(
+        default=False, description="Remove the stored key of the selected provider."
+    )
+
+
+class LLMConnectionTest(BaseModel):
+    ok: bool
+    model: str
+    message: str
+    latency_ms: int | None = None
+
+
+class CatalogModel(BaseModel):
+    id: str
+    provider: Literal["anthropic", "openai"]
+    input_per_mtok: float
+    output_per_mtok: float
+
+
+class LLMCatalog(BaseModel):
+    models: list[CatalogModel]
+    presets: dict[str, AgentModels]

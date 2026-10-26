@@ -868,6 +868,21 @@ execution: status machine, job leases, crash recovery (resume from checkpoint), 
 
 ---
 
+### Follow-up — LLM settings in the UI (2026-10-26)
+**Built:** `/settings/llm` page ("Models" in the nav): provider (Anthropic, OpenAI / compatible via
+base URL, offline demo), encrypted API key, per-agent models with a recommended preset, test
+connection, reset to the server environment. Backend `llm_settings` table (migration 0006),
+`/api/incubator/settings/llm` (GET/PUT/DELETE, `/test`, `/catalog`), per-run resolution in `run_deps`.
+**Deviations from spec (and why):** none.
+**ADRs added:** 0010.
+**Known issues / tech debt:** no auth, so anyone with UI access can change the key; search provider
+keys are still env-only; unpriced models count as $0 against the cost cap.
+**Acceptance criteria:** pytest (273 passed), mypy, ruff, `tsc`, eslint, vitest (83 passed) pass;
+migration applied; PUT/GET/test/DELETE exercised against a running API (a bad key surfaces the
+provider's 401, keys never appear in responses).
+
+---
+
 ## Entry template
 ### Phase N — <name> (YYYY-MM-DD)
 **Built:**

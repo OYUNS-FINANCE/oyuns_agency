@@ -197,7 +197,7 @@ async def _resume_value(rt: WorkerRuntime, run: Run, idea_id: uuid.UUID) -> dict
 
 async def _drive_graph(rt: WorkerRuntime, run: Run, owner: str) -> None:
     settings = rt.settings
-    deps, _ = run_deps(settings, rt.sessionmaker, run)
+    deps, _ = await run_deps(settings, rt.sessionmaker, run)
     config = _config(run.id)
     # durability="sync": each step's checkpoint is committed before the next step starts,
     # so a killed worker loses at most the step that was running.

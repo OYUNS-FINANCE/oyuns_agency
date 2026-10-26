@@ -129,6 +129,63 @@
         "title": "AgentCost",
         "type": "object"
       },
+      "AgentModels": {
+        "properties": {
+          "analyst_model": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Analyst Model",
+            "type": "string"
+          },
+          "editor_model": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Editor Model",
+            "type": "string"
+          },
+          "financial_modeler_model": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Financial Modeler Model",
+            "type": "string"
+          },
+          "gtm_strategist_model": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Gtm Strategist Model",
+            "type": "string"
+          },
+          "product_architect_model": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Product Architect Model",
+            "type": "string"
+          },
+          "scout_model": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Scout Model",
+            "type": "string"
+          },
+          "skeptic_model": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Skeptic Model",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scout_model",
+          "analyst_model",
+          "skeptic_model",
+          "product_architect_model",
+          "gtm_strategist_model",
+          "financial_modeler_model",
+          "editor_model"
+        ],
+        "title": "AgentModels",
+        "type": "object"
+      },
       "AgentStarted": {
         "properties": {
           "idea_id": {
@@ -370,6 +427,46 @@
           "data"
         ],
         "title": "AgentToolCallEvent",
+        "type": "object"
+      },
+      "ApiKeyStatus": {
+        "properties": {
+          "hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Last 4 characters, never the key.",
+            "title": "Hint"
+          },
+          "is_set": {
+            "title": "Is Set",
+            "type": "boolean"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ui",
+                  "environment"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "required": [
+          "is_set"
+        ],
+        "title": "ApiKeyStatus",
         "type": "object"
       },
       "ApplyVersionRequest": {
@@ -763,6 +860,38 @@
           "checklist"
         ],
         "title": "BusinessPlan",
+        "type": "object"
+      },
+      "CatalogModel": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "input_per_mtok": {
+            "title": "Input Per Mtok",
+            "type": "number"
+          },
+          "output_per_mtok": {
+            "title": "Output Per Mtok",
+            "type": "number"
+          },
+          "provider": {
+            "enum": [
+              "anthropic",
+              "openai"
+            ],
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "input_per_mtok",
+          "output_per_mtok"
+        ],
+        "title": "CatalogModel",
         "type": "object"
       },
       "ChannelAssumption": {
@@ -2284,6 +2413,183 @@
           "job_id"
         ],
         "title": "JobAccepted",
+        "type": "object"
+      },
+      "LLMCatalog": {
+        "properties": {
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogModel"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "presets": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/AgentModels"
+            },
+            "title": "Presets",
+            "type": "object"
+          }
+        },
+        "required": [
+          "models",
+          "presets"
+        ],
+        "title": "LLMCatalog",
+        "type": "object"
+      },
+      "LLMConnectionTest": {
+        "properties": {
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "model",
+          "message"
+        ],
+        "title": "LLMConnectionTest",
+        "type": "object"
+      },
+      "LLMSettingsUpdate": {
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "New key for the selected provider; omit to keep the stored one.",
+            "title": "Api Key"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "clear_api_key": {
+            "default": false,
+            "description": "Remove the stored key of the selected provider.",
+            "title": "Clear Api Key",
+            "type": "boolean"
+          },
+          "models": {
+            "$ref": "#/components/schemas/AgentModels"
+          },
+          "provider": {
+            "enum": [
+              "anthropic",
+              "openai",
+              "fake"
+            ],
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "models"
+        ],
+        "title": "LLMSettingsUpdate",
+        "type": "object"
+      },
+      "LLMSettingsView": {
+        "properties": {
+          "anthropic_key": {
+            "$ref": "#/components/schemas/ApiKeyStatus"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "models": {
+            "$ref": "#/components/schemas/AgentModels"
+          },
+          "openai_key": {
+            "$ref": "#/components/schemas/ApiKeyStatus"
+          },
+          "provider": {
+            "enum": [
+              "anthropic",
+              "openai",
+              "fake"
+            ],
+            "title": "Provider",
+            "type": "string"
+          },
+          "source": {
+            "description": "`ui` once saved from the settings page; otherwise the backend environment.",
+            "enum": [
+              "ui",
+              "environment"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "provider",
+          "base_url",
+          "models",
+          "anthropic_key",
+          "openai_key",
+          "source",
+          "updated_at"
+        ],
+        "title": "LLMSettingsView",
         "type": "object"
       },
       "LaunchChecklist": {
@@ -5338,6 +5644,282 @@
         "summary": "Stream Run",
         "tags": [
           "runs"
+        ]
+      }
+    },
+    "/api/incubator/settings/llm": {
+      "delete": {
+        "description": "Forgets the saved configuration (and keys) so the backend environment decides again.",
+        "operationId": "reset_llm_settings_api_incubator_settings_llm_delete",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LLMSettingsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit or daily cost cap reached"
+          }
+        },
+        "summary": "Reset Llm Settings",
+        "tags": [
+          "settings"
+        ]
+      },
+      "get": {
+        "description": "The LLM configuration new runs will use. API keys are never returned, only whether\none is set and its last four characters.",
+        "operationId": "get_llm_settings_api_incubator_settings_llm_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LLMSettingsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit or daily cost cap reached"
+          }
+        },
+        "summary": "Get Llm Settings",
+        "tags": [
+          "settings"
+        ]
+      },
+      "put": {
+        "description": "Saves provider, endpoint, models and (optionally) a new API key. Applies to runs\nstarted afterwards; runs already executing keep what they started with.",
+        "operationId": "put_llm_settings_api_incubator_settings_llm_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LLMSettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LLMSettingsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit or daily cost cap reached"
+          }
+        },
+        "summary": "Put Llm Settings",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/incubator/settings/llm/catalog": {
+      "get": {
+        "description": "Models with known prices, and the per-provider presets.",
+        "operationId": "llm_catalog_api_incubator_settings_llm_catalog_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LLMCatalog"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit or daily cost cap reached"
+          }
+        },
+        "summary": "Llm Catalog",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/incubator/settings/llm/test": {
+      "post": {
+        "description": "Makes one tiny real call with the submitted configuration, without saving it.",
+        "operationId": "test_llm_settings_api_incubator_settings_llm_test_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LLMSettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LLMConnectionTest"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit or daily cost cap reached"
+          }
+        },
+        "summary": "Test Llm Settings",
+        "tags": [
+          "settings"
         ]
       }
     }

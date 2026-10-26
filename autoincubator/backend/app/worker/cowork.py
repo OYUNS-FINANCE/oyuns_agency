@@ -57,7 +57,7 @@ async def rescore_idea(rt: WorkerRuntime, run_id: uuid.UUID, idea_id: uuid.UUID)
             return "skipped"
         current = await ideas_repo.version(session, idea.id, idea.current_version)
         assert current is not None
-    deps, _ = run_deps(rt.settings, rt.sessionmaker, run)
+    deps, _ = await run_deps(rt.settings, rt.sessionmaker, run)
     started = time.monotonic()
     agent = "skeptic"
     await deps.events.emit(AgentStarted(node="rescore", items=1, idea_id=idea_id), agent=agent)
@@ -151,7 +151,7 @@ async def merge_ideas(rt: WorkerRuntime, run_id: uuid.UUID, idea_ids: Sequence[u
         # Provisional, for the agents' events; the stored key is drawn again under the run
         # lock, so a concurrent merge can only shift it, never collide.
         provisional_key = await ideas_repo.next_merge_key(session, run.id)
-    deps, _ = run_deps(rt.settings, rt.sessionmaker, run)
+    deps, _ = await run_deps(rt.settings, rt.sessionmaker, run)
     run_context = render_run_context(RunInput.model_validate(run.input))
     started = time.monotonic()
     created: uuid.UUID | None = None

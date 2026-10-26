@@ -10,6 +10,10 @@ import type {
   IdeaDetail,
   IdeaView,
   JobAccepted,
+  LLMCatalog,
+  LLMConnectionTest,
+  LLMSettingsUpdate,
+  LLMSettingsView,
   PlanResponse,
   ProfileResponse,
   RunDetail,
@@ -103,6 +107,19 @@ export const api = {
     apiFetch<ProfileResponse>(`${API_BASE}/profile`, { signal }),
   putProfile: (profile: FounderProfile) =>
     apiFetch<ProfileResponse>(`${API_BASE}/profile`, { method: "PUT", ...jsonBody(profile) }),
+  getLlmSettings: (signal?: AbortSignal) =>
+    apiFetch<LLMSettingsView>(`${API_BASE}/settings/llm`, { signal }),
+  putLlmSettings: (body: LLMSettingsUpdate) =>
+    apiFetch<LLMSettingsView>(`${API_BASE}/settings/llm`, { method: "PUT", ...jsonBody(body) }),
+  resetLlmSettings: () =>
+    apiFetch<LLMSettingsView>(`${API_BASE}/settings/llm`, { method: "DELETE" }),
+  testLlmSettings: (body: LLMSettingsUpdate) =>
+    apiFetch<LLMConnectionTest>(`${API_BASE}/settings/llm/test`, {
+      method: "POST",
+      ...jsonBody(body),
+    }),
+  getLlmCatalog: (signal?: AbortSignal) =>
+    apiFetch<LLMCatalog>(`${API_BASE}/settings/llm/catalog`, { signal }),
   streamUrl: (runId: string) => `${API_BASE}/runs/${encodeURIComponent(runId)}/stream`,
 
   // Co-working while the run is paused (ADR 0006).

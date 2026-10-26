@@ -10,6 +10,7 @@ import {
   type CoworkMessageList,
   type CreateRunRequest,
   type FounderProfile,
+  type LLMSettingsUpdate,
 } from "./types";
 
 export const queryKeys = {
@@ -22,6 +23,8 @@ export const queryKeys = {
   messages: (runId: string, ideaId: string) => ["runs", "ideas", runId, ideaId, "cowork"] as const,
   plan: (runId: string) => ["runs", "plan", runId] as const,
   profile: ["profile"] as const,
+  llmSettings: ["settings", "llm"] as const,
+  llmCatalog: ["settings", "llm", "catalog"] as const,
 };
 
 /** Retry transient failures only; a 4xx (bad id, missing run) will not change on retry. */
@@ -109,6 +112,43 @@ export function useSaveProfile() {
     mutationFn: (profile: FounderProfile) => api.putProfile(profile),
     onSuccess: (saved) => client.setQueryData(queryKeys.profile, saved),
   });
+}
+
+export function useLlmSettings() {
+  return useQuery({
+    queryKey: queryKeys.llmSettings,
+    queryFn: ({ signal }) => api.getLlmSettings(signal),
+    retry: retryTransient,
+  });
+}
+
+export function useLlmCatalog() {
+  return useQuery({
+    queryKey: queryKeys.llmCatalog,
+    queryFn: ({ signal }) => api.getLlmCatalog(signal),
+    retry: retryTransient,
+    staleTime: Infinity,
+  });
+}
+
+export function useSaveLlmSettings() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: LLMSettingsUpdate) => api.putLlmSettings(body),
+    onSuccess: (saved) => client.setQueryData(queryKeys.llmSettings, saved),
+  });
+}
+
+export function useResetLlmSettings() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.resetLlmSettings(),
+    onSuccess: (view) => client.setQueryData(queryKeys.llmSettings, view),
+  });
+}
+
+export function useTestLlmSettings() {
+  return useMutation({ mutationFn: (body: LLMSettingsUpdate) => api.testLlmSettings(body) });
 }
 
 // --- Co-working (ADR 0006) --------------------------------------------------------------

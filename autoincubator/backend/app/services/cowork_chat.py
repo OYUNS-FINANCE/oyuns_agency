@@ -152,7 +152,7 @@ async def _attempt(
     turn: _Turn,
     queue: asyncio.Queue[ChatEvent | None],
 ) -> None:
-    deps, _ = run_deps(settings, sm, turn.run)
+    deps, _ = await run_deps(settings, sm, turn.run)
 
     async def on_text(text: str) -> None:
         queue.put_nowait(("delta", CoworkDelta(text=text)))

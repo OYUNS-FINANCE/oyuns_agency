@@ -42,6 +42,14 @@ export type FounderProfile = Schemas["FounderProfile"];
 export type RiskTolerance = NonNullable<FounderProfile["risk_tolerance"]>;
 export type ProfileResponse = Schemas["ProfileResponse"];
 
+export type LLMSettingsView = Schemas["LLMSettingsView"];
+export type LLMSettingsUpdate = Schemas["LLMSettingsUpdate"];
+export type LLMProviderName = LLMSettingsView["provider"];
+export type LLMConnectionTest = Schemas["LLMConnectionTest"];
+export type LLMCatalog = Schemas["LLMCatalog"];
+export type AgentModels = Schemas["AgentModels"];
+export type ApiKeyStatus = Schemas["ApiKeyStatus"];
+
 export type ErrorBody = Schemas["ErrorBody"];
 
 // Business plan (Phase 2, ADR 0007).

@@ -296,6 +296,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/incubator/settings/llm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Llm Settings
+         * @description The LLM configuration new runs will use. API keys are never returned, only whether
+         *     one is set and its last four characters.
+         */
+        get: operations["get_llm_settings_api_incubator_settings_llm_get"];
+        /**
+         * Put Llm Settings
+         * @description Saves provider, endpoint, models and (optionally) a new API key. Applies to runs
+         *     started afterwards; runs already executing keep what they started with.
+         */
+        put: operations["put_llm_settings_api_incubator_settings_llm_put"];
+        post?: never;
+        /**
+         * Reset Llm Settings
+         * @description Forgets the saved configuration (and keys) so the backend environment decides again.
+         */
+        delete: operations["reset_llm_settings_api_incubator_settings_llm_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/incubator/settings/llm/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Llm Catalog
+         * @description Models with known prices, and the per-provider presets.
+         */
+        get: operations["llm_catalog_api_incubator_settings_llm_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/incubator/settings/llm/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test Llm Settings
+         * @description Makes one tiny real call with the submitted configuration, without saving it.
+         */
+        post: operations["test_llm_settings_api_incubator_settings_llm_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -358,6 +428,23 @@ export interface components {
             model: string;
             /** Output Tokens */
             output_tokens: number;
+        };
+        /** AgentModels */
+        AgentModels: {
+            /** Analyst Model */
+            analyst_model: string;
+            /** Editor Model */
+            editor_model: string;
+            /** Financial Modeler Model */
+            financial_modeler_model: string;
+            /** Gtm Strategist Model */
+            gtm_strategist_model: string;
+            /** Product Architect Model */
+            product_architect_model: string;
+            /** Scout Model */
+            scout_model: string;
+            /** Skeptic Model */
+            skeptic_model: string;
         };
         /** AgentStarted */
         AgentStarted: {
@@ -483,6 +570,18 @@ export interface components {
              * @enum {string}
              */
             type: "agent.tool_call";
+        };
+        /** ApiKeyStatus */
+        ApiKeyStatus: {
+            /**
+             * Hint
+             * @description Last 4 characters, never the key.
+             */
+            hint?: string | null;
+            /** Is Set */
+            is_set: boolean;
+            /** Source */
+            source?: ("ui" | "environment") | null;
         };
         /** ApplyVersionRequest */
         ApplyVersionRequest: {
@@ -661,6 +760,20 @@ export interface components {
             product: components["schemas"]["ProductPlan"];
             /** Risks */
             risks: components["schemas"]["Risk"][];
+        };
+        /** CatalogModel */
+        CatalogModel: {
+            /** Id */
+            id: string;
+            /** Input Per Mtok */
+            input_per_mtok: number;
+            /** Output Per Mtok */
+            output_per_mtok: number;
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "anthropic" | "openai";
         };
         /** ChannelAssumption */
         ChannelAssumption: {
@@ -1201,6 +1314,69 @@ export interface components {
         JobAccepted: {
             /** Job Id */
             job_id: string;
+        };
+        /** LLMCatalog */
+        LLMCatalog: {
+            /** Models */
+            models: components["schemas"]["CatalogModel"][];
+            /** Presets */
+            presets: {
+                [key: string]: components["schemas"]["AgentModels"];
+            };
+        };
+        /** LLMConnectionTest */
+        LLMConnectionTest: {
+            /** Latency Ms */
+            latency_ms?: number | null;
+            /** Message */
+            message: string;
+            /** Model */
+            model: string;
+            /** Ok */
+            ok: boolean;
+        };
+        /** LLMSettingsUpdate */
+        LLMSettingsUpdate: {
+            /**
+             * Api Key
+             * @description New key for the selected provider; omit to keep the stored one.
+             */
+            api_key?: string | null;
+            /** Base Url */
+            base_url?: string | null;
+            /**
+             * Clear Api Key
+             * @description Remove the stored key of the selected provider.
+             * @default false
+             */
+            clear_api_key: boolean;
+            models: components["schemas"]["AgentModels"];
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "anthropic" | "openai" | "fake";
+        };
+        /** LLMSettingsView */
+        LLMSettingsView: {
+            anthropic_key: components["schemas"]["ApiKeyStatus"];
+            /** Base Url */
+            base_url: string | null;
+            models: components["schemas"]["AgentModels"];
+            openai_key: components["schemas"]["ApiKeyStatus"];
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "anthropic" | "openai" | "fake";
+            /**
+             * Source
+             * @description `ui` once saved from the settings page; otherwise the backend environment.
+             * @enum {string}
+             */
+            source: "ui" | "environment";
+            /** Updated At */
+            updated_at: string | null;
         };
         /** LaunchChecklist */
         LaunchChecklist: {
@@ -2771,6 +2947,249 @@ export interface operations {
                 };
                 content: {
                     "text/event-stream": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_llm_settings_api_incubator_settings_llm_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LLMSettingsView"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_llm_settings_api_incubator_settings_llm_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LLMSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LLMSettingsView"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reset_llm_settings_api_incubator_settings_llm_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LLMSettingsView"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    llm_catalog_api_incubator_settings_llm_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LLMCatalog"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    test_llm_settings_api_incubator_settings_llm_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LLMSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LLMConnectionTest"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limit or daily cost cap reached */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

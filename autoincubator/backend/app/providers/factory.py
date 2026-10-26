@@ -34,14 +34,14 @@ def build_llm(
         openai_key = settings.openai_api_key.get_secret_value() if settings.openai_api_key else ""
         # Empty → let the SDK resolve credentials itself (OPENAI_API_KEY).
         return OpenAILLM(
-            AsyncOpenAI(api_key=openai_key) if openai_key else AsyncOpenAI(),
+            AsyncOpenAI(api_key=openai_key or None, base_url=settings.llm_base_url or None),
             max_validation_retries=settings.llm_max_validation_retries,
             usage_hook=usage_hook,
             before_call=before_call,
         )
     key = settings.anthropic_api_key.get_secret_value() if settings.anthropic_api_key else ""
     # Empty → let the SDK resolve credentials itself (ANTHROPIC_API_KEY, profiles, WIF).
-    client = AsyncAnthropic(api_key=key) if key else AsyncAnthropic()
+    client = AsyncAnthropic(api_key=key or None, base_url=settings.llm_base_url or None)
     return AnthropicLLM(
         client,
         prompt_caching=settings.llm_prompt_caching,

@@ -254,3 +254,20 @@ class BusinessPlanRow(Base):
     """A BusinessPlan, validated on read."""
     markdown: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = _now()
+
+
+class LLMSettingsRow(Base):
+    """LLM provider configuration saved from the UI. API keys are Fernet-encrypted."""
+
+    __tablename__ = "llm_settings"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    provider: Mapped[str] = mapped_column(String(20))
+    base_url: Mapped[str | None] = mapped_column(String(500))
+    anthropic_api_key_enc: Mapped[str | None] = mapped_column(Text)
+    openai_api_key_enc: Mapped[str | None] = mapped_column(Text)
+    models: Mapped[dict[str, str]] = mapped_column(JSONB)
+    """Agent model field (scout_model, …) → model id."""
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

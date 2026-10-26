@@ -1,7 +1,7 @@
-import { History, Plus, UserRound, type LucideIcon } from "lucide-react";
+import { Cpu, History, Plus, UserRound, type LucideIcon } from "lucide-react";
 
 export interface NavItem {
-  href: "/" | "/runs" | "/settings/profile";
+  href: "/" | "/runs" | "/settings/profile" | "/settings/llm";
   label: string;
   icon: LucideIcon;
   match: (pathname: string) => boolean;
@@ -14,6 +14,12 @@ export const NAV_ITEMS: readonly NavItem[] = [
     href: "/settings/profile",
     label: "Profile",
     icon: UserRound,
-    match: (p) => p.startsWith("/settings"),
+    match: (p) => p.startsWith("/settings/profile"),
+  },
+  {
+    href: "/settings/llm",
+    label: "Models",
+    icon: Cpu,
+    match: (p) => p.startsWith("/settings/llm"),
   },
 ];

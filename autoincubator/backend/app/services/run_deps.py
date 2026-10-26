@@ -20,6 +20,7 @@ from app.graph.deps import GraphDeps
 from app.providers.factory import build_deps
 from app.providers.llm.base import UsageRecord
 from app.services.budget import RunBudget
+from app.services.llm_settings import effective_settings
 
 
 class PostgresUsageStore:
@@ -43,9 +44,12 @@ class PostgresUsageStore:
             return float(await runs_repo.spent_today(session))
 
 
-def run_deps(
+async def run_deps(
     settings: Settings, sessionmaker: async_sessionmaker[AsyncSession], run: Run
 ) -> tuple[GraphDeps, RunBudget]:
+    """The LLM provider and models come from the user's saved UI configuration when there is
+    one, else from the environment; a run keeps what it resolved here for its whole life."""
+    settings = await effective_settings(sessionmaker, settings, run.user_id)
     events = PostgresEventSink(sessionmaker, run.id, run.user_id)
     budget = RunBudget(
         max_tokens=run.max_tokens,
