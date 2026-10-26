@@ -19,6 +19,7 @@ import uuid
 from collections.abc import Awaitable, Callable, Iterator
 from typing import Any, cast
 
+import sentry_sdk
 import structlog
 from opentelemetry import trace
 from opentelemetry.context import Context
@@ -131,3 +132,18 @@ def current_ids() -> dict[str, str]:
     if not ctx.is_valid:
         return {}
     return {"trace_id": f"{ctx.trace_id:032x}", "span_id": f"{ctx.span_id:016x}"}
+
+
+def setup_sentry(settings: Settings, service: str) -> bool:
+    """Reports unhandled exceptions and ERROR logs to Sentry. Off unless SENTRY_DSN is set."""
+    if not settings.sentry_dsn:
+        return False
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.app_env,
+        send_default_pii=False,
+        traces_sample_rate=0.0,  # traces go through OpenTelemetry
+        server_name=service,
+    )
+    sentry_sdk.set_tag("service", service)
+    return True

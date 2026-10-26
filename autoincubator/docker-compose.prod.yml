@@ -1,0 +1,143 @@
+# Production stack for Dokploy (Compose service). Traefik is Dokploy's: it terminates TLS,
+# applies basic auth, and sends /api to the API and everything else to the frontend (ADR 0009).
+# Required variables: see .env.production.example.
+name: autoincubator
+
+x-backend: &backend
+  build: ./backend
+  restart: unless-stopped
+  environment: &backend-env
+    APP_ENV: production
+    DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    REDIS_URL: redis://redis:6379/0
+    LLM_PROVIDER: ${LLM_PROVIDER:-anthropic}
+    SEARCH_PROVIDER: ${SEARCH_PROVIDER:-tavily}
+    ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+    SERPER_API_KEY: ${SERPER_API_KEY:-}
+    DAILY_COST_CAP_USD: ${DAILY_COST_CAP_USD:-25}
+    TRUSTED_PROXY_HOPS: "1"          # Traefik is the only proxy in front of the API
+    LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    SENTRY_DSN: ${SENTRY_DSN:-}
+    OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+  networks: [internal]
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+
+  migrate:
+    <<: *backend
+    restart: "no"
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  api:
+    <<: *backend
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks: [internal, dokploy-network]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.routers.ai-api.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)
+      - traefik.http.routers.ai-api.priority=100
+      - traefik.http.routers.ai-api.entrypoints=websecure
+      - traefik.http.routers.ai-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.ai-api.middlewares=ai-auth
+      - traefik.http.services.ai-api.loadbalancer.server.port=8000
+      # Basic auth for the whole site. BASIC_AUTH_USERS is an htpasswd line with every $ doubled.
+      - traefik.http.middlewares.ai-auth.basicauth.users=${BASIC_AUTH_USERS}
+
+  worker:
+    <<: *backend
+    command: ["arq", "app.worker.main.WorkerSettings"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_URL: http://api:8000
+    restart: unless-stopped
+    depends_on:
+      api: {condition: service_healthy}
+    networks: [internal, dokploy-network]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.routers.ai-web.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.ai-web.entrypoints=websecure
+      - traefik.http.routers.ai-web.tls.certresolver=letsencrypt
+      - traefik.http.routers.ai-web.middlewares=ai-auth
+      - traefik.http.services.ai-web.loadbalancer.server.port=3000
+
+  backup:
+    build:
+      context: ./deploy
+      dockerfile: backup.Dockerfile
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_HOUR_UTC: ${BACKUP_HOUR_UTC:-03}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      RCLONE_REMOTE: ${RCLONE_REMOTE:-}
+      RCLONE_CONFIG_R2_TYPE: ${RCLONE_CONFIG_R2_TYPE:-s3}
+      RCLONE_CONFIG_R2_PROVIDER: ${RCLONE_CONFIG_R2_PROVIDER:-Cloudflare}
+      RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${RCLONE_CONFIG_R2_ACCESS_KEY_ID:-}
+      RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${RCLONE_CONFIG_R2_SECRET_ACCESS_KEY:-}
+      RCLONE_CONFIG_R2_ENDPOINT: ${RCLONE_CONFIG_R2_ENDPOINT:-}
+    volumes:
+      - backups:/backups
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks: [internal]
+
+networks:
+  internal:
+  dokploy-network:
+    external: true
+
+volumes:
+  postgres_data:
+  redis_data:
+  backups:

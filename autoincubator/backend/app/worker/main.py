@@ -8,7 +8,7 @@ from arq.connections import RedisSettings
 
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
-from app.core.telemetry import run_span, setup_tracing, shutdown_tracing
+from app.core.telemetry import run_span, setup_sentry, setup_tracing, shutdown_tracing
 from app.db.session import create_engine, create_sessionmaker
 from app.providers.search.factory import aclose_shared_clients
 from app.worker import cowork as cowork_jobs
@@ -53,6 +53,7 @@ async def recover_runs(ctx: dict[str, Any]) -> int:
 async def startup(ctx: dict[str, Any]) -> None:
     s = get_settings()
     configure_logging(s.log_level, service="worker")
+    setup_sentry(s, "worker")
     setup_tracing(s, "worker")
     engine = create_engine(s.database_url)
     worker_id = f"{socket.gethostname()}:{os.getpid()}:{uuid.uuid4().hex[:6]}"

@@ -1,0 +1,92 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: autoincubator
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: {POSTGRES_USER: autoincubator, POSTGRES_PASSWORD: autoincubator, POSTGRES_DB: autoincubator}
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U autoincubator" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+asyncpg://autoincubator:autoincubator@localhost:5432/autoincubator
+      REDIS_URL: redis://localhost:6379/0
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: autoincubator/backend/uv.lock
+      - name: PDF export needs Pango
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0
+      - run: uv sync --frozen
+        working-directory: autoincubator/backend
+      - run: uv run ruff check . && uv run ruff format --check .
+        working-directory: autoincubator/backend
+      - run: uv run mypy app scripts tests migrations
+        working-directory: autoincubator/backend
+      - run: uv run alembic upgrade head
+        working-directory: autoincubator/backend
+      - run: uv run pytest && uv run pytest -m integration
+        working-directory: autoincubator/backend
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+        working-directory: autoincubator/frontend
+      - run: pnpm lint && pnpm typecheck && pnpm format:check && pnpm test
+        working-directory: autoincubator/frontend
+      - run: pnpm build
+        working-directory: autoincubator/frontend
+
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Production images build
+        run: |
+          docker build -t ai-backend backend
+          docker build -t ai-frontend frontend
+          docker build -t ai-backup -f deploy/backup.Dockerfile deploy
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [backend, frontend, images]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      # Dokploy builds from the repo itself; auto-deploy on push must be OFF in Dokploy so this
+      # is the only trigger and a red CI never ships.
+      - name: Trigger Dokploy deploy
+        run: |
+          curl -fsS -X POST "${{ secrets.DOKPLOY_URL }}/api/compose.deploy" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
+            -H "content-type: application/json" \
+            -d '{"composeId":"${{ secrets.DOKPLOY_COMPOSE_ID }}"}'
+        working-directory: .

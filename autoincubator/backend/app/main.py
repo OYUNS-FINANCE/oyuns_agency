@@ -11,7 +11,7 @@ from app.api.middleware import RequestContextMiddleware
 from app.core.config import get_settings
 from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging, get_logger
-from app.core.telemetry import setup_tracing, shutdown_tracing
+from app.core.telemetry import setup_sentry, setup_tracing, shutdown_tracing
 from app.db.session import create_engine, create_sessionmaker
 from app.events.broker import EventBroker
 from app.events.schema import EVENT_ADAPTER
@@ -73,6 +73,7 @@ def _openapi_with_events(app: FastAPI) -> dict[str, Any]:
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.log_level, service="api")
+    setup_sentry(settings, "api")
     tracing = setup_tracing(settings, "api")
     log.info("app.tracing", enabled=tracing)
     app = FastAPI(title="AutoIncubator", version="0.4.0", lifespan=lifespan)

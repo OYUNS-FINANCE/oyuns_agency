@@ -20,6 +20,46 @@ CLI check, which the Phase 6 real runs cover.
 
 ---
 
+### Phase 7 — Deployment (2026-10-26)
+**Built:**
+- Dockerfiles (multi-stage): `backend/` (one image for API, worker and migrations; Pango for
+  PDF export; non-root) and `frontend/` (Next standalone). `deploy/backup.Dockerfile`.
+- `docker-compose.prod.yml` for a Dokploy Compose service: postgres, redis (AOF), one-shot
+  `migrate`, api, worker, frontend, nightly `backup`. Traefik labels route `/api` to the API,
+  the rest to the frontend, with basic auth on both. `.env.production.example`.
+- Backups: `pg_dump -Fc` nightly, 14 days, optional off-box copy via rclone;
+  `restore-test.sh` restores into a scratch DB.
+- Optional Sentry in API and worker (`SENTRY_DSN`).
+- `.github/workflows/ci.yml` (repo root): backend lint/types/unit+integration tests, frontend
+  lint/types/format/tests/build, image builds, then a Dokploy deploy call on main.
+- `docs/RUNBOOK.md`: deploy, rollback, restore, key rotation. ADR 0009.
+
+**Deviations from spec (and why):**
+- Auth is Traefik basic auth, not magic links (no code, single user; ADR 0009).
+- The ADR was written and accepted without a separate sign-off round: the target (Dokploy on a
+  VPS) was already chosen. Monthly costs are rough, not re-verified.
+
+**ADRs added:** 0009.
+
+**Known issues / tech debt:**
+- Not yet exercised on a real Dokploy/VPS: Traefik label names, `compose.deploy` API call,
+  Let's Encrypt, `TRUSTED_PROXY_HOPS=1`. Real Anthropic/search runs and the evals are still
+  pending keys (Phase 6).
+- Backups are on the same box unless `RCLONE_REMOTE` is set.
+- No uptime monitor is provisioned; point an external check at `/api/health` (needs basic auth).
+
+**Acceptance criteria:**
+- Verified locally with the production compose (fake LLM, Traefik absent): all services
+  healthy, migrations applied, a run reaches `awaiting_human`, SSE streams directly and via the
+  Next proxy, `Last-Event-ID` replay resumes at the next event, PDF renders in the image,
+  worker survives a Redis restart, backup → restore into a scratch DB succeeds.
+- Pending a real VPS: "fresh deploy from main", "full run on the public URL".
+
+**Next:** deploy to the VPS following `docs/RUNBOOK.md`, tick the two pending criteria, then run
+the Phase 6 evals with real keys.
+
+---
+
 ### Phase 6 — Real search, evals, cost & observability (2026-10-24)
 **Built:**
 - **Search** (`providers/search/`, ADR 0008):

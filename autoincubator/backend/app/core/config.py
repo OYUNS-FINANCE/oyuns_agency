@@ -121,6 +121,7 @@ class Settings(BaseSettings):
 
     # Observability (ADR 0008)
     otel_exporter_otlp_endpoint: str | None = None
+    sentry_dsn: str | None = None  # unset = error reporting off (ADR 0009)
     """OTLP/HTTP base URL, e.g. http://jaeger:4318. Unset = tracing off."""
     otel_service_name: str = "autoincubator"
 
