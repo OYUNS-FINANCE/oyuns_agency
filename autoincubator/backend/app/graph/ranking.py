@@ -6,6 +6,7 @@ import structlog
 from langgraph.runtime import Runtime
 
 from app.agents.common.brief import IdeaBrief
+from app.agents.scout.schemas import RawOpportunity as Opportunity
 from app.agents.skeptic.schemas import RUBRIC_DIMENSIONS, CritiqueScorecard
 from app.core.config import RubricWeights
 from app.events.schema import AgentCompleted, AgentThought
@@ -28,11 +29,17 @@ def composite_score(critique: CritiqueScorecard, weights: RubricWeights) -> floa
     return round(sum(scores[d] * w[d] for d in RUBRIC_DIMENSIONS) / total, 2)
 
 
-def shortfall_message(viable: int, minimum: int, threshold: float, passes: int) -> str:
+def shortfall_message(
+    viable: int, minimum: int, threshold: float, passes: int, shown_below: int
+) -> str:
+    tail = (
+        f" The best {shown_below} idea(s) below the threshold are shown, marked as such."
+        if shown_below
+        else ""
+    )
     return (
         f"Only {viable} idea(s) reached the quality threshold of {threshold:.1f} after "
-        f"{passes} Scout pass(es), fewer than the {minimum} requested. The list shows only "
-        "the ideas that passed; it has not been padded."
+        f"{passes} Scout pass(es), fewer than the {minimum} requested.{tail}"
     )
 
 
@@ -47,23 +54,38 @@ async def rank_node(state: Phase1State, runtime: Runtime[GraphDeps]) -> Phase1St
         (o for o in scored if scores[o.id] >= settings.quality_threshold),
         key=lambda o: (-scores[o.id], o.id),
     )
+    enough = len(viable) >= settings.min_viable_ideas
+    loop_back = not enough and iteration < settings.max_scout_iterations
+    # Out of Scout passes and short of ideas: show the best of the rest, flagged, instead of
+    # an empty list. They never count towards `viable_count`.
+    below: list[Opportunity] = []
+    if not enough and not loop_back:
+        viable_ids = {o.id for o in viable}
+        below = sorted(
+            (o for o in scored if o.id not in viable_ids),
+            key=lambda o: (-scores[o.id], o.id),
+        )[: max(settings.min_viable_ideas - len(viable), 0)]
+    viable_set = {o.id for o in viable}
     briefs = [
         IdeaBrief(
             rank=i,
             composite_score=scores[o.id],
+            below_threshold=o.id not in viable_set,
             opportunity=o,
             analysis=analyses[o.id],
             critique=critiques[o.id],
         )
-        for i, o in enumerate(viable[: settings.max_briefs], start=1)
+        for i, o in enumerate([*viable[: settings.max_briefs], *below], start=1)
     ]
-    enough = len(viable) >= settings.min_viable_ideas
-    loop_back = not enough and iteration < settings.max_scout_iterations
     shortfall = (
         None
         if enough or loop_back
         else shortfall_message(
-            len(viable), settings.min_viable_ideas, settings.quality_threshold, iteration
+            len(viable),
+            settings.min_viable_ideas,
+            settings.quality_threshold,
+            iteration,
+            len(below),
         )
     )
     events = runtime.context.events

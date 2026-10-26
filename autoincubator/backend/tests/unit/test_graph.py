@@ -95,7 +95,12 @@ async def test_quality_loop_runs_exactly_once_then_reports_shortfall_honestly() 
     payload = _payload(result)
     assert payload.iterations == 2  # one loop back, no more
     assert payload.viable_count == 1
-    assert [b.idea_id for b in payload.briefs] == ["opp-01"]  # not padded with failures
+    # Topped up with the best of the rest, flagged, never counted as viable.
+    assert [(b.idea_id, b.below_threshold) for b in payload.briefs] == [
+        ("opp-01", False),
+        ("opp-03", True),
+        ("opp-02", True),
+    ]
     assert payload.shortfall is not None
     assert "fewer than the 3 requested" in payload.shortfall
     llm = d.llm

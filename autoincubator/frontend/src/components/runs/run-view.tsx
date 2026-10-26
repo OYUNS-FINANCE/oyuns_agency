@@ -301,7 +301,7 @@ function RunBanners({
       </Banner>,
     );
   } else if (run.status === "awaiting_human") {
-    const n = run.viable_count ?? run.ideas.length;
+    const n = run.ideas.length;
     banners.push(
       <Banner
         key="review"

@@ -1126,6 +1126,11 @@ export interface components {
         /** IdeaBrief */
         IdeaBrief: {
             analysis: components["schemas"]["MarketAnalysis"];
+            /**
+             * Below Threshold
+             * @default false
+             */
+            below_threshold: boolean;
             /** Composite Score */
             composite_score: number;
             critique: components["schemas"]["CritiqueScorecard"];

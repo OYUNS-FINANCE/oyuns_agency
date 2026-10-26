@@ -118,7 +118,7 @@ class Settings(BaseSettings):
     """Artificial delay per FakeLLM call: makes offline runs observable live (UI, kill tests)."""
 
     # Phase-1 graph
-    quality_threshold: float = Field(default=6.0, ge=1, le=10)
+    quality_threshold: float = Field(default=5.0, ge=1, le=10)
     max_scout_iterations: int = Field(default=2, ge=1)
     min_viable_ideas: int = Field(default=3, ge=1)
     max_briefs: int = Field(default=5, ge=1)

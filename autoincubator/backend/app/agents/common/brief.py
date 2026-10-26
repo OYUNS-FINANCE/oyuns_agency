@@ -12,6 +12,8 @@ from app.agents.skeptic.schemas import CritiqueScorecard
 class IdeaBrief(BaseModel):
     rank: int = Field(ge=1)
     composite_score: float = Field(ge=1, le=10)
+    below_threshold: bool = False
+    """Shown only because too few ideas passed the quality threshold."""
     opportunity: RawOpportunity
     analysis: MarketAnalysis
     critique: CritiqueScorecard

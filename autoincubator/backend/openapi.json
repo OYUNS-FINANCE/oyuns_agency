@@ -1921,6 +1921,11 @@
           "analysis": {
             "$ref": "#/components/schemas/MarketAnalysis"
           },
+          "below_threshold": {
+            "default": false,
+            "title": "Below Threshold",
+            "type": "boolean"
+          },
           "composite_score": {
             "maximum": 10.0,
             "minimum": 1.0,
